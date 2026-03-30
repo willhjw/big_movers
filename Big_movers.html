@@ -1,0 +1,3508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Big Movers — Qullamaggie Research</title>
+<script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --bg:#0a0c0f;--bg2:#111418;--bg3:#181d23;--border:#1f2833;
+    --text:#e8f0f8;--muted:#8899aa;--accent:#00d4aa;--accent2:#ff6b35;
+    --green:#26a69a;--red:#ef5350;--yellow:#f5c842;
+    --tv:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --mono:var(--tv);--sans:var(--tv);
+    --chart-bg:#0a0c0f;--chart-grid:#1f2833;--row-border:#0f1318;--row-active:#0d2a22;
+    --vol-up:#1a3a35;--vol-down:#3a1a1a;
+  }
+  [data-theme="light"]{
+    --bg:#f5f7fa;--bg2:#ffffff;--bg3:#e8ecf0;--border:#d0d7dd;
+    --text:#1a1f2e;--muted:#5a6775;--accent:#00a885;--accent2:#e55a2b;
+    --green:#1a7f64;--red:#c53030;--yellow:#c99005;
+    --chart-bg:#ffffff;--chart-grid:#e0e4e8;--row-border:#e8ecf0;--row-active:#d4efe6;
+    --vol-up:#d4efe6;--vol-down:#f5d4d4;
+  }
+  /* Light theme overrides for floating UI */
+  [data-theme="light"] .ma-float{
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(208,215,221,0.95);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+  }
+  [data-theme="light"] .draw-toolbar{
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(208,215,221,0.95);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+  }
+  [data-theme="light"] .tool-popup{
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--tv);overflow:hidden;}
+  .app{display:grid;grid-template-rows:48px 1fr;height:100vh;}
+  .topbar{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex-wrap:wrap;}
+  .topbar .spacer{flex:1 1 auto;min-width:10px;}
+  .logo{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;}
+  .vsep{width:1px;height:20px;background:var(--border);flex-shrink:0;}
+  .filters{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap;}
+  .filters select,.filters input{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:4px 7px;border-radius:3px;outline:none;}
+  .filters label{font-size:11px;color:var(--muted);font-family:var(--mono);}
+  .stat-badge{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--bg3);border:1px solid var(--border);padding:3px 10px;border-radius:3px;white-space:nowrap;}
+  .stat-badge span{color:var(--accent);}
+  .main{display:grid;grid-template-columns:clamp(320px,30vw,480px) 1fr;overflow:hidden;}
+  .table-panel{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+  .table-header{display:grid;grid-template-columns:18% 12% 22% 22% 16% 10%;padding:5px 12px;background:var(--bg3);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;user-select:none;}
+  .table-header span{cursor:pointer;transition:color 0.15s;}
+  .table-header span:hover{color:var(--accent);}
+  .table-header span.sort-asc::after{content:' ▲';color:var(--accent);}
+  .table-header span.sort-desc::after{content:' ▼';color:var(--accent);}
+  .table-body{flex:1;overflow-y:auto;}
+  .table-body::-webkit-scrollbar{width:4px;}
+  .table-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  .row{display:grid;grid-template-columns:18% 12% 22% 22% 16% 10%;padding:7px 12px;border-bottom:1px solid var(--row-border);font-family:var(--mono);font-size:11px;cursor:pointer;transition:background 0.1s;align-items:center;}
+  .row:hover{background:var(--bg3);}
+  .row.active{background:var(--row-active);border-left:2px solid var(--accent);}
+  .sym{color:var(--text);font-weight:600;}
+  .date{color:var(--muted);font-size:10px;}
+  .gain{font-weight:600;color:var(--green);}
+  .vol{color:var(--muted);font-size:10px;}
+  .chart-panel{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);position:relative;}
+  .chart-topbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 10px;background:var(--bg2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:clamp(10px,0.8vw,12px);min-height:36px;}
+  /* Make topbar controls consistent size (match schwab_chart) */
+  .chart-topbar{--ctrl:28px;}
+  .chart-topbar .tb-btn{width:var(--ctrl);height:var(--ctrl);border-radius:10px;font-size:11px;}
+  .chart-topbar .ma-toggle-btn{width:var(--ctrl);height:var(--ctrl);border-radius:10px;}
+  .chart-topbar .ma-toggle-btn.text{font-size:12px;font-weight:900;letter-spacing:0.02em;font-family:var(--mono);}
+  .chart-topbar .ma-toggle-btn.active{border-color:var(--accent);color:var(--accent);}
+  .chart-symbol{font-size:15px;font-weight:600;color:var(--text);}
+  .chart-cond{font-size:10px;padding:2px 7px;border-radius:2px;border:1px solid var(--accent);color:var(--accent);}
+  .chart-gain{color:var(--green);font-weight:600;}
+  .chart-info{color:var(--muted);font-size:11px;}
+
+  /* Chart settings dropdown (type + colors) */
+  .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;}
+  .ct-menu{position:relative;display:inline-flex;align-items:center;}
+  .ct-menu-btn{
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: var(--ctrl);
+    height: var(--ctrl);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    font-family: var(--tv);
+    font-size: 11px;
+    font-weight: 600;
+    user-select:none;
+  }
+  .ct-menu-btn:hover{border-color:rgba(0,212,170,0.35);color:var(--accent);background:rgba(0,212,170,0.08);}
+  .ct-menu-btn .ico{width:18px;height:18px;display:block;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .ct-pop{
+    position:absolute;
+    top:calc(100% + 8px);
+    left:0;
+    z-index: 60;
+    min-width: 220px;
+    padding: 10px;
+    background: rgba(10,12,15,0.92);
+    border: 1px solid rgba(31,40,51,0.9);
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display:none;
+  }
+  [data-theme="light"] .ct-pop{
+    background: rgba(255,255,255,0.92);
+    border-color: rgba(208,215,221,0.95);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+  }
+  .ct-pop.open{display:block;}
+  .ct-section-title{
+    font-family: var(--tv);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 2px 2px 8px;
+  }
+  .ct-type-row{display:flex;gap:8px;margin-bottom:10px;}
+  .ct-type-opt{
+    flex:1 1 auto;
+    border: 1px solid rgba(31,40,51,0.9);
+    background: rgba(24,29,35,0.7);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 8px 8px;
+    cursor:pointer;
+    font-family: var(--tv);
+    font-size: 11px;
+    font-weight: 700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap: 8px;
+    transition: border-color .12s ease, background .12s ease, transform .12s ease;
+    user-select:none;
+  }
+  [data-theme="light"] .ct-type-opt{background: rgba(232,236,240,0.75);border-color: rgba(208,215,221,0.95);}
+  .ct-type-opt:hover{transform: translateY(-1px);border-color: rgba(0,212,170,0.40);}
+  .ct-type-opt.active{border-color: rgba(0,212,170,0.70);background: rgba(0,212,170,0.12);color: var(--accent);}
+  .ct-type-opt svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .ct-colors{display:flex;gap:10px;align-items:center;justify-content:space-between;}
+  .ct-color{display:flex;align-items:center;gap:6px;font-family:var(--tv);font-size:11px;color:var(--muted);font-weight:600;}
+  .ct-color input[type=color]{width:18px;height:16px;border:1px solid var(--border);border-radius:50%;padding:0;background:none;cursor:pointer;}
+
+  /* ct-pop modern inputs */
+  #ct-pop input[type=number],
+  #ct-pop input[type=text]{
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    outline: none;
+    text-align: center;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+  #ct-pop input[type=number]{
+    -moz-appearance: textfield;
+    -webkit-appearance: none;
+  }
+  #ct-pop input[type=number]::-webkit-inner-spin-button,
+  #ct-pop input[type=number]::-webkit-outer-spin-button{
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  #ct-pop input[type=number]:focus-visible,
+  #ct-pop input[type=text]:focus-visible{
+    box-shadow: 0 0 0 3px rgba(0,212,170,0.22);
+    border-color: rgba(0,212,170,0.55);
+  }
+
+  /* ct-pop modern checkbox (Separate pane) */
+  #ct-vol-pane{
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
+    border: 1px solid color-mix(in srgb, var(--border) 80%, var(--text) 20%);
+    background: color-mix(in srgb, var(--bg3) 78%, var(--bg2) 22%);
+    display: inline-grid;
+    place-content: center;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease, box-shadow .12s ease, transform .06s ease;
+    margin: 0;
+  }
+  #ct-vol-pane::before{
+    content: "";
+    width: 9px;
+    height: 6px;
+    border-left: 2px solid transparent;
+    border-bottom: 2px solid transparent;
+    transform: rotate(-45deg) translateY(-0.5px);
+    transition: border-color .12s ease;
+  }
+  #ct-vol-pane:checked{
+    background: color-mix(in srgb, var(--accent) 20%, var(--bg3) 80%);
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border) 45%);
+  }
+  #ct-vol-pane:checked::before{
+    border-left-color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  #ct-vol-pane:active{transform: scale(0.96);}
+  #ct-vol-pane:focus-visible{
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0,212,170,0.22);
+  }
+  
+  /* Crosshair info bar */
+  .crosshair-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 4px 12px;
+    background: var(--bg3);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    min-height: 28px;
+    color: var(--muted);
+  }
+  .info-item {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .info-label {
+    color: var(--muted);
+    opacity: 0.7;
+    font-weight: 400;
+  }
+  .info-value {
+    color: var(--text);
+    font-weight: 500;
+    min-width: 45px;
+  }
+  #info-change {
+    display: inline-block;
+    width: 130px;
+    min-width: unset;
+  }
+  .info-value.up {
+    color: var(--green);
+  }
+  .info-value.down {
+    color: var(--red);
+  }
+  .info-date {
+    color: var(--accent);
+    font-weight: 600;
+    min-width: 90px;
+  }
+  .info-vol {
+    color: var(--yellow);
+  }
+  /* keep spacing compact while still stable */
+  #info-open, #info-high, #info-low, #info-close {
+    width: 41px;
+    min-width: 41px;
+    text-align: left;
+  }
+  #info-vol, #info-dvol {
+    width: 45px;
+    min-width: 45px;
+    text-align: left;
+  }
+
+  /* Stable MA numbers (no jitter, compact) */
+  #info-ma{
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+  #info-ma .ma-entry{
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0;
+    white-space: nowrap;
+  }
+  #info-ma .ma-lbl{
+    display: inline-block;
+    width: auto; /* keep label tight to value */
+    text-align: left;
+    opacity: 0.95;
+  }
+  #info-ma .ma-val{
+    display: inline-block;
+    width: 62px; /* fixed width prevents jitter */
+    text-align: left;
+  }
+  #info-ma .ma-sep{
+    color: var(--muted);
+    opacity: 0.75;
+    margin: 0 8px;
+  }
+  
+  /* MA section with toggle */
+  .ma-section {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  /* Floating MA panel (vertical) */
+  .ma-float{
+    position:absolute;
+    z-index: 30;
+    width: 248px;
+    padding: 8px 8px;
+    background: rgba(10,12,15,0.92);
+    border: 1px solid rgba(31,40,51,0.9);
+    border-radius: 10px;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.45);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: none;
+  }
+  .ma-float.open{display:block;}
+  .ma-float .ma-controls{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+  }
+  .ma-float #ma-add-btn{
+    width: 100%;
+    height: 28px;
+    border-radius: 10px;
+    justify-content: center;
+  }
+  .ma-float .ma-row{
+    width: 100%;
+    justify-content: space-between;
+    padding: 6px 6px;
+    gap: 6px;
+  }
+  .ma-float .ma-row select.ma-type{width: 54px!important;}
+  .ma-float .ma-row input.ma-period{width: 56px!important;}
+  .ma-float .ma-row input[type=color]{width: 20px;height: 18px;}
+  .ma-float .ma-del{font-size: 12px;}
+  
+  /* Icon button styles */
+  .ma-toggle-btn, #toolbar-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0;
+    padding: 2px;
+    width: 26px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-radius: 3px;
+  }
+  
+  .ma-toggle-btn:hover, #toolbar-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  
+  .ma-toggle-btn svg, #toolbar-toggle svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  /* MA icon - three moving average lines */
+  .ma-icon {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  
+  /* Tool icon - brush/pencil */
+  .tool-icon {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  
+  /* Collapsed state icon color */
+  .ma-toggle-btn.collapsed svg,
+  #toolbar-toggle.collapsed svg {
+    color: var(--accent);
+  }
+  
+  .ma-toggle-btn svg,
+  #toolbar-toggle svg {
+    transition: transform 0.2s;
+  }
+  
+  .ma-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    transition: all 0.2s;
+  }
+  .ma-controls.collapsed .ma-row,
+  .ma-controls.collapsed #ma-add-btn {
+    display: none;
+  }
+  
+  .ma-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 3px 5px;
+  }
+  /* Modern checkbox */
+  .ma-row input[type=checkbox]{
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
+    border: 1px solid color-mix(in srgb, var(--border) 80%, var(--text) 20%);
+    background: color-mix(in srgb, var(--bg3) 78%, var(--bg2) 22%);
+    display: inline-grid;
+    place-content: center;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease, box-shadow .12s ease, transform .06s ease;
+  }
+  .ma-row input[type=checkbox]::before{
+    content: "";
+    width: 9px;
+    height: 6px;
+    border-left: 2px solid transparent;
+    border-bottom: 2px solid transparent;
+    transform: rotate(-45deg) translateY(-0.5px);
+    transition: border-color .12s ease;
+  }
+  .ma-row input[type=checkbox]:checked{
+    background: color-mix(in srgb, var(--accent) 20%, var(--bg3) 80%);
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border) 45%);
+  }
+  .ma-row input[type=checkbox]:checked::before{
+    border-left-color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .ma-row input[type=checkbox]:active{transform: scale(0.96);}
+  .ma-row input[type=checkbox]:focus-visible{
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0,212,170,0.22);
+  }
+  .ma-row select,
+  .ma-row input[type=number] {
+    background: var(--bg3);
+    border: none;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 1px 3px;
+    outline: none;
+  }
+  .ma-row select option {
+    background: var(--bg2);
+    color: var(--text);
+  }
+  .ma-row input[type=number] {
+    -moz-appearance: textfield;
+    width: 44px;
+    text-align: center;
+  }
+  .ma-row input[type=number]::-webkit-inner-spin-button,
+  .ma-row input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .ma-row input[type=color] {
+    width: 18px;
+    height: 16px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    background: none;
+  }
+  .ma-del {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+  }
+  .ma-del:hover {
+    color: var(--red);
+  }
+  
+  .draw-toolbar {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 6px;
+    width: 44px;
+    background: rgba(10,12,15,0.92);
+    border: 1px solid rgba(31,40,51,0.9);
+    border-radius: 10px;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.45);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .draw-toolbar.collapsed .tool-group,
+  .draw-toolbar.collapsed .tb-sep,
+  .draw-toolbar.collapsed #log-toggle,
+  .draw-toolbar.collapsed #tool-clear,
+  .draw-toolbar.collapsed #tool-measure,
+  .draw-toolbar.collapsed #tool-pan,
+  .draw-toolbar.collapsed #tool-hline,
+  .draw-toolbar.collapsed #tool-line,
+  .draw-toolbar.collapsed #tool-ray,
+  .draw-toolbar.collapsed #tool-seg,
+  .draw-toolbar.collapsed #tool-note,
+  .draw-toolbar.collapsed #tool-text { display:none; }
+  .tool-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tool-cfg-btn {
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    line-height: 1;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(31,40,51,0.9);
+    color: var(--muted);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .tool-group:hover .tool-cfg-btn,
+  .tool-cfg-btn:focus-visible{
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .tool-cfg-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .tool-cfg-btn svg{
+    width:12px;
+    height:12px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .tool-cfg-btn:hover {
+    border-color: rgba(0,212,170,0.35);
+    color: var(--accent);
+    background: rgba(0,212,170,0.10);
+  }
+  .tool-popup {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 50;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 8px;
+    align-items: center;
+    min-width: 160px;
+    max-width: 180px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  .tool-popup label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .tool-popup select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 2px;
+    outline: none;
+  }
+  .tool-popup select option {
+    background: var(--bg2);
+    color: var(--text);
+  }
+  .tool-popup select {
+    min-width: 80px;
+  }
+  .tool-popup input[type=color] {
+    width: 32px;
+    height: 22px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 0;
+  }
+  .tb-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    white-space: nowrap;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width: 32px;
+    height: 32px;
+  }
+  .tb-btn .tb-ico{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:18px;
+    height:18px;
+    flex:0 0 18px;
+  }
+  .tb-btn .tb-ico svg{
+    width:18px;
+    height:18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .tb-btn:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+  }
+  .tb-btn.active {
+    background: rgba(0,212,170,0.14);
+    border-color: rgba(0,212,170,0.35);
+    color: var(--accent);
+  }
+  .tb-btn.log-on {
+    background: rgba(245,200,66,0.12);
+    border-color: rgba(245,200,66,0.35);
+    color: var(--yellow);
+  }
+  /* Info-bar right-side controls */
+  .info-spacer{margin-left:auto;}
+  .info-actions{display:flex;align-items:center;gap:6px;}
+  .info-actions .tb-btn{
+    width:auto;
+    min-width: 34px;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: 10px;
+  }
+  .tb-sep {
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .chart-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .chart-wrap {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+  }
+  .vol-pane{
+    height: 140px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    flex: 0 0 auto;
+    min-height: 0;
+    overflow: hidden;
+    z-index: 10;
+    position: relative;
+  }
+  .vol-pane.hidden{display:none!important;}
+  #vol-chart{width:100%;height:100%;}
+  .vol-resize-hit{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    height:8px;
+    cursor: ns-resize;
+    z-index: 25;
+  }
+  .vol-pane-info{
+    position:absolute;
+    top:6px;
+    left:10px;
+    z-index: 20;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    pointer-events:none;
+    user-select:none;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+  .vol-pane-info .v{
+    color: var(--yellow);
+    font-weight: 600;
+    display: inline-block;
+    width: 72px;
+    text-align: left;
+  }
+  #chart {
+    width: 100%;
+    height: 100%;
+  }
+  #draw-canvas {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+  /* Crosshair overlay (spans main chart + volume pane) */
+  #crosshair-overlay{
+    position:absolute;
+    inset:0;
+    z-index:40;
+    pointer-events:none;
+  }
+  #txt-wrap {
+    display: none;
+    position: absolute;
+    z-index: 30;
+  }
+  #txt-hint {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    background: rgba(10,12,15,0.85);
+    padding: 2px 6px;
+    border-radius: 2px 2px 0 0;
+    white-space: nowrap;
+  }
+  #txt-input {
+    display: block;
+    background: rgba(10,12,15,0.75);
+    border: 1px solid rgba(0,212,170,0.35);
+    color: var(--text);
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    padding: 8px 10px;
+    outline: none;
+    min-width: 180px;
+    width: 100%;
+    line-height: 1.4;
+    caret-color: var(--accent);
+    resize: none;
+    overflow: hidden;
+    min-height: 44px;
+    border-radius: 8px;
+  }
+  #txt-input:focus{
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,212,170,0.15);
+  }
+  .hint {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    pointer-events: none;
+    z-index: 6;
+    background: rgba(10,12,15,0.85);
+    padding: 2px 10px;
+    border-radius: 2px;
+  }
+  .placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 13px;
+    pointer-events: none;
+  }
+  .placeholder .icon {
+    font-size: 40px;
+    opacity: 0.3;
+  }
+  .loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10,12,15,0.8);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    z-index: 10;
+  }
+  .hidden {
+    display: none!important;
+  }
+  .save-flash {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    background: var(--bg2);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 14px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .save-flash.show {
+    opacity: 1;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">Big Movers</div>
+    <div class="vsep"></div>
+    <div class="filters">
+      <label>Min%</label><input id="f-gain" type="number" placeholder="0" style="width:4em">
+      <label>Symbol</label><input id="f-sym" type="text" placeholder="AAPL" style="width:5em;text-transform:uppercase">
+      <label>Year</label><input id="f-year" type="number" placeholder="2025" style="width:5.4em">
+    </div>
+    <div class="stat-badge">Showing <span id="count">0</span> stocks</div>
+    <div class="spacer"></div>
+    <div class="vsep"></div>
+    <button id="theme-toggle" class="tb-btn" title="Toggle theme">☀ Light</button>
+  </div>
+  <div class="main">
+    <div class="table-panel">
+      <div class="table-header" id="table-header">
+        <span data-col="symbol">Symbol</span>
+        <span data-col="year">Year</span>
+        <span data-col="low_date">Low</span>
+        <span data-col="high_date">High</span>
+        <span data-col="gain_pct">Gain%</span>
+        <span data-col="avg_vol_b">Vol$B</span>
+      </div>
+      <div class="table-body" id="table-body">
+        <div style="padding:20px;color:var(--muted);font-family:var(--mono);font-size:12px;">Loading...</div>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-topbar">
+        <span class="chart-symbol" id="ct-sym">—</span>
+        <span class="chart-cond"   id="ct-cond"></span>
+        <span class="chart-gain"   id="ct-gain"></span>
+        <span class="chart-info"   id="ct-range"></span>
+        <span class="chart-info"   id="ct-vol"></span>
+        <div class="tf-controls" style="display:flex;align-items:center;gap:3px;">
+          <button class="tb-btn active" id="tf-D" title="Daily">D</button>
+          <button class="tb-btn" id="tf-W" title="Weekly">W</button>
+          <button class="tb-btn" id="tf-M" title="Monthly">M</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="ct-menu" id="ct-menu">
+            <button class="ct-menu-btn" id="ct-menu-btn" type="button" aria-haspopup="dialog" aria-expanded="false" title="Chart settings">
+              <svg class="ico" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M6 4v12" />
+                <rect x="4.6" y="8" width="2.8" height="4" rx="0.6" />
+                <path d="M14 4v12" />
+                <rect x="12.6" y="6.5" width="2.8" height="7" rx="0.6" />
+              </svg>
+              <span id="ct-menu-label" class="sr-only">Candles</span>
+            </button>
+            <div class="ct-pop" id="ct-pop" role="dialog" aria-label="Chart settings">
+              <div class="ct-section-title">Chart type</div>
+              <div class="ct-type-row">
+                <div class="ct-type-opt" id="ct-opt-candle" data-type="candle">
+                  <svg viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M6 4v12" />
+                    <rect x="4.6" y="8" width="2.8" height="4" rx="0.6" />
+                    <path d="M14 4v12" />
+                    <rect x="12.6" y="6.5" width="2.8" height="7" rx="0.6" />
+                  </svg>
+                  <span>Candles</span>
+                </div>
+                <div class="ct-type-opt" id="ct-opt-ohlc" data-type="ohlc">
+                  <svg viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M6 4v12" />
+                    <path d="M6 9h-3" />
+                    <path d="M6 11h3" />
+                    <path d="M14 4v12" />
+                    <path d="M14 7h-3" />
+                    <path d="M14 13h3" />
+                  </svg>
+                  <span>Bars</span>
+                </div>
+              </div>
+              <div class="ct-section-title">Colors</div>
+              <div class="ct-colors">
+                <label class="ct-color">Up <input id="ct-up" type="color"></label>
+                <label class="ct-color">Down <input id="ct-down" type="color"></label>
+              </div>
+              <div class="ct-section-title" style="margin-top:10px;">Volume</div>
+              <label class="ct-color" style="justify-content:flex-start;gap:8px;">
+                <input id="ct-vol-pane" type="checkbox">
+                Separate pane
+              </label>
+              <div id="ct-right-offset-wrap" class="ct-section-title" style="margin-top:12px;">
+                Right offset
+              </div>
+              <div id="ct-right-offset-row" style="margin-top:6px;">
+                <label class="ct-color" style="justify-content:flex-start;gap:8px;">
+                  <span style="color:var(--muted);font-weight:700;">Bars</span>
+                  <input id="ct-right-offset" type="number" min="0" max="30" step="1" style="width:72px;">
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button id="ma-toggle" class="ma-toggle-btn" title="Moving Averages" aria-label="Moving Averages">
+          <svg viewBox="0 0 20 20" class="ma-icon">
+            <path d="M2,14 L6,8 L10,12 L14,6 L18,10" stroke="currentColor" fill="none" stroke-width="1.5"/>
+            <path d="M2,12 L6,10 L10,14 L14,10 L18,14" stroke="currentColor" fill="none" stroke-width="1.5" opacity="0.7"/>
+            <path d="M2,16 L6,14 L10,16 L14,12 L18,16" stroke="currentColor" fill="none" stroke-width="1.5" opacity="0.5"/>
+          </svg>
+        </button>
+        <button id="spy-toggle" class="ma-toggle-btn text" title="Benchmark overlay (VS SPY): Off → Line → Candle → Bar" aria-label="Benchmark overlay">VS</button>
+        <div class="tb-sep"></div>
+        <div class="tb-sep"></div>
+      </div>
+
+      <div class="ma-float" id="ma-panel" aria-hidden="true">
+        <div class="ma-controls" id="ma-controls">
+          <button class="tb-btn" id="ma-add-btn">+ MA</button>
+        </div>
+      </div>
+      
+      <!-- Crosshair Info Bar -->
+      <div class="crosshair-info" id="crosshair-info">
+        <div class="info-item">
+          <span class="info-label">Date:</span>
+          <span class="info-value info-date" id="info-date">—</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Change:</span>
+          <span class="info-value" id="info-change">—</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">O:</span>
+          <span class="info-value" id="info-open">—</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">H:</span>
+          <span class="info-value" id="info-high">—</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">L:</span>
+          <span class="info-value" id="info-low">—</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">C:</span>
+          <span class="info-value" id="info-close">—</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Vol:</span>
+          <span class="info-value info-vol" id="info-vol">—</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">$Vol:</span>
+          <span class="info-value info-vol" id="info-dvol">—</span>
+        </div>
+        <div class="info-item"><span class="info-label">MA:</span><span class="info-value" id="info-ma">—</span></div>
+        <div class="info-spacer"></div>
+        <div class="info-actions">
+          <button class="tb-btn" id="log-toggle" title="Log / Linear scale">Log</button>
+        </div>
+      </div>
+      
+      <div class="chart-container">
+        <div class="chart-wrap" id="chart-wrap">
+          <div class="draw-toolbar" id="draw-toolbar">
+            <button id="toolbar-toggle" title="Toggle toolbar">
+              <svg viewBox="0 0 20 20" class="tool-icon">
+                <path d="M14,4 L16,6 L6,16 L4,14 L14,4" stroke="currentColor" fill="none" stroke-width="1.5"/>
+                <path d="M4,14 L2,18 L6,16" stroke="currentColor" fill="none" stroke-width="1.5"/>
+                <circle cx="15" cy="5" r="1.5" stroke="currentColor" fill="none" stroke-width="1.5"/>
+              </svg>
+            </button>
+            <div class="tb-sep"></div>
+            <button class="tb-btn active" id="tool-pan" title="Arrow [Alt+V]" aria-label="Arrow">
+              <span class="tb-ico" aria-hidden="true">
+                <svg viewBox="0 0 20 20">
+                  <path d="M4 3.5L15.5 9.5L11 11L9.5 15.5Z" />
+                </svg>
+              </span>
+            </button>
+            <span class="tool-group">
+              <button class="tb-btn" id="tool-hline" title="Horizontal Line [Alt+H]" aria-label="H-Line">
+                <span class="tb-ico" aria-hidden="true">
+                  <svg viewBox="0 0 20 20">
+                    <path d="M4 10H16" />
+                  </svg>
+                </span>
+              </button>
+              <button class="tool-cfg-btn" id="cfg-hline" title="H-Line style" aria-label="H-Line settings">
+                <svg viewBox="0 0 20 20"><path d="M10 2l1.4 2.5 2.9.6-2 2.2.3 3-2.6-1.2-2.6 1.2.3-3-2-2.2 2.9-.6L10 2z"/></svg>
+              </button>
+              <div class="tool-popup hidden" id="popup-hline">
+                <label>Color</label><input type="color" class="cfg-color" value="#ffffff">
+                <label>Width</label>
+                <select class="cfg-width">
+                  <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option>
+                </select>
+                <label>Style</label>
+                <select class="cfg-style">
+                  <option value="solid">——</option><option value="dash">- -</option><option value="dot">···</option>
+                </select>
+              </div>
+            </span>
+            <span class="tool-group">
+              <button class="tb-btn" id="tool-line" title="Extended Line [Alt+A]" aria-label="Line">
+                <span class="tb-ico" aria-hidden="true">
+                  <svg viewBox="0 0 20 20"><path d="M3 10h14"/><path d="M6 7l-3 3 3 3M14 7l3 3-3 3"/></svg>
+                </span>
+              </button>
+              <button class="tool-cfg-btn" id="cfg-line" title="Line style" aria-label="Line settings">
+                <svg viewBox="0 0 20 20"><path d="M10 2l1.4 2.5 2.9.6-2 2.2.3 3-2.6-1.2-2.6 1.2.3-3-2-2.2 2.9-.6L10 2z"/></svg>
+              </button>
+              <div class="tool-popup hidden" id="popup-line">
+                <label>Color</label><input type="color" class="cfg-color" value="#ffffff">
+                <label>Width</label>
+                <select class="cfg-width">
+                  <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option>
+                </select>
+                <label>Style</label>
+                <select class="cfg-style">
+                  <option value="solid">——</option><option value="dash">- -</option><option value="dot">···</option>
+                </select>
+              </div>
+            </span>
+            <span class="tool-group">
+              <button class="tb-btn" id="tool-ray" title="Ray [Alt+R]" aria-label="Ray">
+                <span class="tb-ico" aria-hidden="true">
+                  <svg viewBox="0 0 20 20"><path d="M4 16L16 4"/><path d="M11 4h5v5"/></svg>
+                </span>
+              </button>
+              <button class="tool-cfg-btn" id="cfg-ray" title="Ray style" aria-label="Ray settings">
+                <svg viewBox="0 0 20 20"><path d="M10 2l1.4 2.5 2.9.6-2 2.2.3 3-2.6-1.2-2.6 1.2.3-3-2-2.2 2.9-.6L10 2z"/></svg>
+              </button>
+              <div class="tool-popup hidden" id="popup-ray">
+                <label>Color</label><input type="color" class="cfg-color" value="#ffffff">
+                <label>Width</label>
+                <select class="cfg-width">
+                  <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option>
+                </select>
+                <label>Style</label>
+                <select class="cfg-style">
+                  <option value="solid">——</option><option value="dash">- -</option><option value="dot">···</option>
+                </select>
+              </div>
+            </span>
+            <span class="tool-group">
+              <button class="tb-btn" id="tool-seg" title="Segment [Alt+S]" aria-label="Seg">
+                <span class="tb-ico" aria-hidden="true">
+                  <svg viewBox="0 0 20 20"><path d="M5 15L15 5"/></svg>
+                </span>
+              </button>
+              <button class="tool-cfg-btn" id="cfg-seg" title="Segment style" aria-label="Seg settings">
+                <svg viewBox="0 0 20 20"><path d="M10 2l1.4 2.5 2.9.6-2 2.2.3 3-2.6-1.2-2.6 1.2.3-3-2-2.2 2.9-.6L10 2z"/></svg>
+              </button>
+              <div class="tool-popup hidden" id="popup-seg">
+                <label>Color</label><input type="color" class="cfg-color" value="#ffffff">
+                <label>Width</label>
+                <select class="cfg-width">
+                  <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option>
+                </select>
+                <label>Style</label>
+                <select class="cfg-style">
+                  <option value="solid">——</option><option value="dash">- -</option><option value="dot">···</option>
+                </select>
+              </div>
+            </span>
+            <span class="tool-group">
+              <button class="tb-btn" id="tool-text" title="Text Label [Alt+T]" aria-label="Text">
+                <span class="tb-ico" aria-hidden="true">
+                  <svg viewBox="0 0 20 20"><path d="M4 5h12"/><path d="M10 5v12"/><path d="M7 17h6"/></svg>
+                </span>
+              </button>
+              <button class="tool-cfg-btn" id="cfg-text" title="Text style" aria-label="Text settings">
+                <svg viewBox="0 0 20 20"><path d="M10 2l1.4 2.5 2.9.6-2 2.2.3 3-2.6-1.2-2.6 1.2.3-3-2-2.2 2.9-.6L10 2z"/></svg>
+              </button>
+              <div class="tool-popup hidden" id="popup-text">
+                <label>Color</label><input type="color" class="cfg-color" value="#ffffff">
+                <label>Size</label>
+                <select class="cfg-fontsize">
+                  <option value="10">10</option><option value="11">11</option><option value="12" selected>12</option>
+                  <option value="14">14</option><option value="16">16</option><option value="18">18</option>
+                  <option value="20">20</option><option value="24">24</option>
+                </select>
+              </div>
+            </span>
+            <span class="tool-group">
+              <button class="tb-btn" id="tool-note" title="Note [Alt+N]" aria-label="Note">
+                <span class="tb-ico" aria-hidden="true">
+                  <svg viewBox="0 0 20 20">
+                    <path d="M4 15L10 9" />
+                    <path d="M10 9H16V15H10Z" />
+                  </svg>
+                </span>
+              </button>
+              <button class="tool-cfg-btn" id="cfg-note" title="Note style" aria-label="Note settings">
+                <svg viewBox="0 0 20 20"><path d="M10 2l1.4 2.5 2.9.6-2 2.2.3 3-2.6-1.2-2.6 1.2.3-3-2-2.2 2.9-.6L10 2z"/></svg>
+              </button>
+              <div class="tool-popup hidden" id="popup-note">
+                <label>Color</label><input type="color" class="cfg-color" value="#ffffff">
+                <label>Width</label>
+                <select class="cfg-width">
+                  <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option>
+                </select>
+                <label>Style</label>
+                <select class="cfg-style">
+                  <option value="solid">——</option><option value="dash">- -</option><option value="dot">···</option>
+                </select>
+                <label>Size</label>
+                <select class="cfg-fontsize">
+                  <option value="10">10</option><option value="11">11</option><option value="12" selected>12</option>
+                  <option value="14">14</option><option value="16">16</option><option value="18">18</option>
+                  <option value="20">20</option><option value="24">24</option>
+                </select>
+              </div>
+            </span>
+            <button class="tb-btn" id="tool-measure" title="Measure [Alt+M]" aria-label="Measure">
+              <span class="tb-ico" aria-hidden="true">
+                <svg viewBox="0 0 20 20">
+                  <path d="M5 14L15 4" />
+                  <circle cx="7" cy="6" r="1.6" />
+                  <circle cx="13" cy="12" r="1.6" />
+                </svg>
+              </span>
+            </button>
+            <button class="tb-btn" id="tool-clear" title="Clear all drawings" aria-label="Clear">
+              <span class="tb-ico" aria-hidden="true">
+                <!-- trash can icon -->
+                <svg viewBox="0 0 20 20">
+                  <path d="M5 6h10" />
+                  <path d="M8 6V4h4v2" />
+                  <path d="M6.5 6l.8 11h5.4l.8-11" />
+                  <path d="M8.5 9v6M10 9v6M11.5 9v6" />
+                </svg>
+              </span>
+            </button>
+          </div>
+          <div class="placeholder" id="placeholder"><div class="icon">📈</div><p>Select a move from the list to view chart</p></div>
+          <div class="loading hidden" id="loading">Loading chart data...</div>
+          <div id="chart"></div>
+          <canvas id="draw-canvas"></canvas>
+          <div id="txt-wrap">
+            <div id="txt-hint">Shift+Enter: new line &nbsp;|&nbsp; Enter: confirm &nbsp;|&nbsp; Esc: cancel</div>
+            <textarea id="txt-input" rows="1"></textarea>
+          </div>
+          <div class="hint hidden" id="hint">Click second point to finish</div>
+        </div>
+        <div class="vol-pane hidden" id="vol-pane" aria-hidden="true">
+          <div class="vol-resize-hit" id="vol-resize-hit" aria-hidden="true"></div>
+          <div class="vol-pane-info" id="vol-pane-info" aria-hidden="true">
+            <span>Vol</span><span class="v" id="vol-pane-vol">—</span>
+            <span>$Vol</span><span class="v" id="vol-pane-dvol">—</span>
+          </div>
+          <div id="vol-chart"></div>
+        </div>
+        <canvas id="crosshair-overlay"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="save-flash" id="save-flash"></div>
+
+<script>
+// ==============================================
+// STATE
+// ==============================================
+let allRows=[],filtered=[],activeIdx=-1;
+let chart=null,candleSeries=null,ohlcSeries=null,volSeries=null;
+let volChart=null;
+let volPaneEnabled=false;
+let volPaneHeight=140;
+let _syncingVolRange=false;
+let priceSeries=null;
+let currentBars=[],currentSymbol='';
+let currentMoveRow=null; // cache selected row for re-applying markers after setData()
+let sortCol='year',sortDir=1;
+let isLogScale=false;
+let maList=[],maIdCounter=0;
+let drawTool='pan';
+let currentTF='D'; // D | W | M
+// ===== VS (SPY benchmark overlay) state =====
+let spyLineSeries=null, spyCandleSeries=null, spyBarSeries=null;
+let spyOverlayEnabled=false;
+let spyOverlayMode='line'; // 'line' | 'candle' | 'bar'
+let spyBars=null; // cached SPY bars from server endpoint
+let spyVisibleFromTime=null, spyVisibleToTime=null; // used to normalize the overlay to 100 at the left edge
+let chartType='candle'; // 'candle' | 'ohlc'
+let priceColors = { up: '#26a69a', down: '#ef5350' };
+let drawings={};      // {symbol:[{id,type,...}]}
+let drawIdCtr=0;
+
+const RIGHT_OFFSET_BARS = 6;
+let persistedRightOffset = RIGHT_OFFSET_BARS;
+
+// Custom crosshair overlay (spans main chart + volume pane)
+let crosshairOverlayCanvas = null;
+let crosshairOverlayCtx = null;
+let crosshairOverlayX = null;
+let crosshairOverlayY = null;
+let crosshairOverlayDpr = 1;
+let crosshairOverlayLabel = '';
+let overlayMainOffsetY = 0;
+let overlayVolOffsetY = 0;
+
+function syncPersistedRightOffset(){
+  if(!chart) return;
+  const ro = chart.timeScale().options().rightOffset;
+  if(typeof ro === 'number' && Number.isFinite(ro)) persistedRightOffset = ro;
+}
+
+// per-tool style settings
+const toolSettings={
+  hline:{color:'#ffffff',width:2,style:'solid'},
+  ray:  {color:'#ffffff',width:2,style:'solid'},
+  seg:  {color:'#ffffff',width:2,style:'solid'},
+  line: {color:'#ffffff',width:2,style:'solid'},
+  text: {color:'#ffffff',fontSize:12,fontFamily:'Arial'},
+  note: {color:'#ffffff',width:2,style:'solid',fontSize:12,fontFamily:'Arial'},
+};
+
+// current active tool settings (shorthand)
+let drawColor='#ffffff', drawWidth=2, drawLineStyle='solid';
+let drawFontSize=12, drawFontFamily='IBM Plex Mono';
+function syncDrawVars(){
+  const s=toolSettings[drawTool]||toolSettings.seg;
+  drawColor=s.color; drawWidth=s.width||2; drawLineStyle=s.style||'solid'; drawFontSize=s.fontSize||12; drawFontFamily=s.fontFamily||'IBM Plex Mono';
+}
+let pendingP1=null;   // first click for ray/seg
+let undoHistory=[];   // [{symbol, snapshot}]
+let measureStart=null; // measure tool first point
+let measureEnd=null;   // measure tool second point (live)
+let selectedId=null;
+let previewMouseX=0,previewMouseY=0;
+// drag state (global so document listeners can access)
+let dragId=null,dragStartX=0,dragStartY=0,dragOrig=null,wasDrag=false;
+
+const MA_DEFAULTS=[
+  {type:'EMA',period:20, color:'#f5c842'},
+  {type:'EMA',period:50, color:'#00d4aa'},
+  {type:'MA', period:200,color:'#ff6b35'},
+];
+
+// ==============================================
+// THEME
+// ==============================================
+let isLightTheme = false;
+const themeToggle = document.getElementById('theme-toggle');
+
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', isLightTheme ? 'light' : 'dark');
+  themeToggle.textContent = isLightTheme ? '🌙 Dark' : '☀ Light';
+  localStorage.setItem('bm_theme', isLightTheme ? 'light' : 'dark');
+
+  const bg = isLightTheme ? '#ffffff' : '#0a0c0f';
+  const tx = isLightTheme ? '#1a1f2e' : '#e8f0f8';
+  const border = isLightTheme ? '#d0d7dd' : '#1f2833';
+
+  // Update chart colors
+  if (chart) {
+    chart.applyOptions({
+      layout: {
+        background: { color: bg },
+        textColor: tx,
+      },
+      grid: {
+        vertLines: { visible: false },
+        horzLines: { visible: false },
+      },
+      rightPriceScale: { borderColor: border },
+      timeScale: { borderColor: border },
+    });
+
+    // Update volume pane chart colors (light/dark).
+    try{
+      if (volChart) {
+        volChart.applyOptions({
+          layout: {
+            background: { color: bg },
+            textColor: tx,
+          },
+          grid: {
+            vertLines: { visible: false },
+            horzLines: { visible: false },
+          },
+          rightPriceScale: { borderColor: border, visible: true, borderVisible: true },
+          timeScale: { borderColor: border, timeVisible: true, visible: true },
+        });
+      }
+    }catch(e){}
+
+    // Update volume colors
+    if (currentBars.length) {
+      const tf = currentTF;
+      const bars = resampleBars(currentBars, tf);
+      volSeries.setData(bars.map(b => ({
+        time: b.time,
+        value: b.volume,
+        // Match candle colors (not theme tints)
+        color: b.close >= b.open ? (priceColors?.up || '#26a69a') : (priceColors?.down || '#ef5350')
+      })));
+    }
+
+    // Update MA lines - refresh them to pick up any color changes
+    updateAllMA();
+  }
+}
+
+themeToggle.addEventListener('click', () => {
+  isLightTheme = !isLightTheme;
+  applyTheme();
+  saveSettings();
+});
+
+// Load saved theme
+if (localStorage.getItem('bm_theme') === 'light') {
+  isLightTheme = true;
+  document.documentElement.setAttribute('data-theme', 'light');
+  themeToggle.textContent = '🌙 Dark';
+}
+
+// ==============================================
+// PERSIST
+// ==============================================
+function saveSettings(){
+  localStorage.setItem('bm_cfg',JSON.stringify({
+    isLogScale,toolSettings,chartType,priceColors,
+    spyOverlayEnabled,spyOverlayMode,
+    volumePaneEnabled: !!volPaneEnabled,
+    volumePaneHeight: (typeof volPaneHeight === 'number' && Number.isFinite(volPaneHeight)) ? volPaneHeight : 140,
+    rightOffsetBars: persistedRightOffset,
+    maList:maList.map(m=>({type:m.type,period:m.period,color:m.color,enabled:m.enabled}))
+  }));
+  flash('Settings saved');
+}
+function loadSettings(){try{return JSON.parse(localStorage.getItem('bm_cfg')||'null');}catch(e){return null;}}
+async function saveDrawings(){
+  try{
+    await fetch('/api/drawings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(drawings)});
+    flash('Drawings saved');
+  }catch(e){}
+}
+async function loadDrawings(){
+  try{const r=await fetch('/api/drawings');drawings=await r.json();}catch(e){drawings={};}
+}
+function flash(msg){
+  const el=document.getElementById('save-flash');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),1800);
+}
+
+// ==============================================
+// MA
+// ==============================================
+function calcMA(bars,p){
+  const out=[];
+  for(let i=p-1;i<bars.length;i++){let s=0;for(let j=i-p+1;j<=i;j++)s+=bars[j].close;out.push({time:bars[i].time,value:parseFloat((s/p).toFixed(4))});}
+  return out;
+}
+function calcEMA(bars,p){
+  if(bars.length<p)return[];
+  const k=2/(p+1);let e=bars.slice(0,p).reduce((s,b)=>s+b.close,0)/p;
+  const out=[{time:bars[p-1].time,value:parseFloat(e.toFixed(4))}];
+  for(let i=p;i<bars.length;i++){e=bars[i].close*k+e*(1-k);out.push({time:bars[i].time,value:parseFloat(e.toFixed(4))});}
+  return out;
+}
+function getMaData(bars,type,p){return type==='EMA'?calcEMA(bars,p):calcMA(bars,p);}
+function addMaRow(cfg={},skipSave=false){
+  const id=++maIdCounter,type=cfg.type||'EMA',period=cfg.period||20,color=cfg.color||'#fff',enabled=cfg.enabled!==false;
+  const series=chart?chart.addLineSeries({color,lineWidth:2,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false}):null;
+  maList.push({id,type,period,color,enabled,series});
+  const ctrl=document.getElementById('ma-controls'),addBtn=document.getElementById('ma-add-btn');
+  const div=document.createElement('div');div.className='ma-row';div.dataset.id=id;
+  div.innerHTML=`<input type="checkbox" ${enabled?'checked':''}><select class="ma-type" style="width:46px"><option ${type==='EMA'?'selected':''}>EMA</option><option ${type==='MA'?'selected':''}>MA</option></select><input type="number" class="ma-period" value="${period}" min="1" max="999" style="width:44px"><input type="color" class="ma-color" value="${color}"><button class="ma-del">✕</button>`;
+  ctrl.insertBefore(div,addBtn);
+  const upd=()=>{if(!skipSave)saveSettings();updateMaSeries(id);};
+  div.querySelector('input[type=checkbox]').addEventListener('change',e=>{getMa(id).enabled=e.target.checked;upd();});
+  div.querySelector('.ma-type').addEventListener('change',e=>{getMa(id).type=e.target.value;upd();});
+  // Persist MA period immediately (change fires on blur only)
+  const periodEl = div.querySelector('.ma-period');
+  const commitPeriod = (raw) => {
+    const v = parseInt(raw, 10);
+    getMa(id).period = (Number.isFinite(v) && v > 0) ? v : 20;
+    periodEl.value = String(getMa(id).period);
+    upd();
+  };
+  periodEl.addEventListener('input', e => commitPeriod(e.target.value));
+  periodEl.addEventListener('change', e => commitPeriod(e.target.value));
+  periodEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitPeriod(e.target.value);
+      periodEl.blur();
+    }
+  });
+  div.querySelector('.ma-color').addEventListener('input',e=>{getMa(id).color=e.target.value;getMa(id).series?.applyOptions({color:e.target.value});if(!skipSave)saveSettings();});
+  div.querySelector('.ma-del').addEventListener('click',()=>{removeMaRow(id);saveSettings();});
+  if(currentBars.length)updateMaSeries(id);
+}
+function getMa(id){return maList.find(m=>m.id===id);}
+function removeMaRow(id){
+  const m=getMa(id);if(m?.series&&chart)try{chart.removeSeries(m.series);}catch(e){}
+  maList=maList.filter(m=>m.id!==id);
+  document.querySelector(`.ma-row[data-id="${id}"]`)?.remove();
+}
+function updateMaSeries(id){
+  const m=getMa(id);if(!m?.series||!currentBars.length)return;
+  const bars = resampleBars(currentBars, currentTF);
+  const data = m.enabled ? getMaData(bars, m.type, m.period) : [];
+  m.series.setData(data);
+  m._dataMap = new Map(data.map(p => [p.time, p.value]));
+}
+function updateAllMA(){maList.forEach(m=>updateMaSeries(m.id));}
+document.getElementById('ma-add-btn').addEventListener('click',()=>{addMaRow();saveSettings();});
+
+// ==============================================
+// MA PANEL (anchored to the right of D/W/M)
+// ==============================================
+const maToggle = document.getElementById('ma-toggle');
+const maPanel = document.getElementById('ma-panel');
+const maControls = document.getElementById('ma-controls');
+
+function positionMaPanel(){
+  if(!maToggle || !maPanel) return;
+  const panelHost = document.querySelector('.chart-panel');
+  if(!panelHost) return;
+  const hostRect = panelHost.getBoundingClientRect();
+  const tRect = maToggle.getBoundingClientRect();
+  maPanel.style.left = `${Math.max(8, tRect.left - hostRect.left)}px`;
+  maPanel.style.top  = `${Math.max(8, tRect.bottom - hostRect.top + 8)}px`;
+}
+
+function setMaOpen(open){
+  if(!maPanel || !maToggle) return;
+  maPanel.classList.toggle('open', open);
+  maPanel.setAttribute('aria-hidden', open ? 'false' : 'true');
+  localStorage.setItem('ma_open', open ? '1' : '0');
+  if(open) positionMaPanel();
+}
+
+maToggle?.addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  const open = !maPanel.classList.contains('open');
+  setMaOpen(open);
+});
+
+document.addEventListener('pointerdown', (e) => {
+  if(!maPanel || !maToggle) return;
+  if(!maPanel.classList.contains('open')) return;
+  if(maPanel.contains(e.target) || maToggle.contains(e.target)) return;
+  setMaOpen(false);
+}, true);
+
+window.addEventListener('resize', () => {
+  if(maPanel?.classList.contains('open')) positionMaPanel();
+});
+
+if (localStorage.getItem('ma_open') === '1') {
+  setMaOpen(true);
+}
+
+// ==============================================
+// VS (SPY benchmark overlay) toggle
+// ==============================================
+const spyToggle = document.getElementById('spy-toggle');
+if (spyToggle) {
+  spyToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Cycle 4 states: Off -> Line -> Candle -> Bar -> Off
+    if (!spyOverlayEnabled) {
+      setSpyOverlayEnabled(true, true);
+      setSpyOverlayMode('line', true);
+      return;
+    }
+    if (spyOverlayMode === 'line') { setSpyOverlayMode('candle'); return; }
+    if (spyOverlayMode === 'candle') { setSpyOverlayMode('bar'); return; }
+    // bar -> off
+    setSpyOverlayEnabled(false);
+  });
+}
+
+// ==============================================
+// TOOLBAR TOGGLE - with brush icon
+// ==============================================
+const toolbarToggle = document.getElementById('toolbar-toggle');
+const drawToolbar = document.getElementById('draw-toolbar');
+
+toolbarToggle.addEventListener('click', () => {
+  const collapsed = drawToolbar.classList.toggle('collapsed');
+  toolbarToggle.classList.toggle('collapsed', collapsed);
+  localStorage.setItem('toolbar_collapsed', collapsed);
+});
+
+const savedToolbarCollapsed = localStorage.getItem('toolbar_collapsed') === 'true';
+if (savedToolbarCollapsed) {
+  drawToolbar.classList.add('collapsed');
+  toolbarToggle.classList.add('collapsed');
+}
+
+// ==============================================
+// CROSSHAIR INFO UPDATE
+// ==============================================
+function updateCrosshairInfo(param) {
+  const infoDate = document.getElementById('info-date');
+  const infoChange = document.getElementById('info-change');
+  const infoOpen = document.getElementById('info-open');
+  const infoHigh = document.getElementById('info-high');
+  const infoLow = document.getElementById('info-low');
+  const infoClose = document.getElementById('info-close');
+  const infoVol = document.getElementById('info-vol');
+  const infoDVol = document.getElementById('info-dvol');
+  const volPaneVol = document.getElementById('vol-pane-vol');
+  const volPaneDVol = document.getElementById('vol-pane-dvol');
+  const infoMA = document.getElementById('info-ma');
+
+  const clear = () => {
+    infoDate.textContent = '—';
+    infoChange.textContent = '—';
+    infoChange.className = 'info-value';
+    infoOpen.textContent = '—';
+    infoHigh.textContent = '—';
+    infoLow.textContent = '—';
+    infoClose.textContent = '—';
+    infoVol.textContent = '—';
+    infoDVol.textContent = '—';
+    if (volPaneVol) volPaneVol.textContent = '—';
+    if (volPaneDVol) volPaneDVol.textContent = '—';
+    if (infoMA) infoMA.textContent = '—';
+  };
+
+  if (!param || !param.point || !currentBars || !currentBars.length) { clear(); return; }
+
+  // ── 1. 把 param.time 统一转成 "YYYY-MM-DD" 字符串 ──
+  // v3 中 param.time 可能是 {year,month,day} 对象，也可能是时间戳数字或字符串
+  function paramTimeToStr(t) {
+    if (!t) return null;
+    if (typeof t === 'string') return t;
+    if (typeof t === 'number') {
+      const d = new Date(t * 1000);
+      return d.toISOString().slice(0, 10);
+    }
+    if (typeof t === 'object' && t.year) {
+      const mm = String(t.month).padStart(2, '0');
+      const dd = String(t.day).padStart(2, '0');
+      return `${t.year}-${mm}-${dd}`;
+    }
+    return String(t);
+  }
+  const timeStr = paramTimeToStr(param.time);
+  if (!timeStr) { clear(); return; }
+
+  // ── 2. 从 seriesData / seriesPrices 拿 OHLC ──
+  let ohlc = null;
+  if (priceSeries && param.seriesData) {
+    ohlc = param.seriesData.get(priceSeries) || null;
+  }
+  if (!ohlc && priceSeries && param.seriesPrices) {
+    const v = param.seriesPrices.get(priceSeries);
+    if (v && typeof v === 'object' && v.open !== undefined) ohlc = v;
+  }
+
+  // ── 3. 按 timeStr 找 resampledBar（含 volume）──
+  const resampledBars = resampleBars(currentBars, currentTF);
+  let bar = resampledBars.find(b => b.time === timeStr) || null;
+  if (!bar) {
+    // 最近日期兜底
+    let best = null, bestDiff = Infinity;
+    const target = new Date(timeStr).getTime();
+    for (const b of resampledBars) {
+      const diff = Math.abs(new Date(b.time).getTime() - target);
+      if (diff < bestDiff) { bestDiff = diff; best = b; }
+    }
+    bar = best;
+  }
+
+  // ── 4. 用 seriesData 的 OHLC 覆盖（更准确），保留 bar 的 volume ──
+  if (ohlc && ohlc.open !== undefined) {
+    bar = bar
+      ? { ...bar, open: ohlc.open, high: ohlc.high, low: ohlc.low, close: ohlc.close }
+      : { time: timeStr, open: ohlc.open, high: ohlc.high, low: ohlc.low, close: ohlc.close, volume: 0 };
+  }
+
+  // ── 5. 同时从 volSeries seriesData 拿 volume（最可靠）──
+  if (volSeries && param.seriesData) {
+    const vd = param.seriesData.get(volSeries);
+    if (vd && vd.value !== undefined) {
+      bar = { ...bar, volume: vd.value };
+    }
+  }
+
+  if (!bar) { clear(); return; }
+
+  // ── 6. 渲染 ──
+  infoDate.textContent = bar.time || timeStr;
+
+  const barIdx = resampledBars.findIndex(b => b.time === bar.time);
+  const prevBar = barIdx > 0 ? resampledBars[barIdx - 1] : bar;
+  const prevClose = Number(prevBar?.close);
+  const changeAbsNum = Number(bar.close) - prevClose;
+  const change = (Number.isFinite(prevClose) && prevClose !== 0)
+    ? ((changeAbsNum / prevClose) * 100).toFixed(2)
+    : '0.00';
+  const changeAbs = changeAbsNum.toFixed(2);
+  infoChange.className = `info-value ${changeAbsNum >= 0 ? 'up' : 'down'}`;
+  infoChange.textContent = `${changeAbs} (${change}%)`;
+
+  infoOpen.textContent  = typeof bar.open  === 'number' ? bar.open.toFixed(2)  : bar.open;
+  infoHigh.textContent  = typeof bar.high  === 'number' ? bar.high.toFixed(2)  : bar.high;
+  infoLow.textContent   = typeof bar.low   === 'number' ? bar.low.toFixed(2)   : bar.low;
+  infoClose.textContent = typeof bar.close === 'number' ? bar.close.toFixed(2) : bar.close;
+
+  const vol = bar.volume !== undefined ? bar.volume : (bar.value || 0);
+  const fmtVol = v =>
+    v >= 1e9 ? (v / 1e9).toFixed(2) + 'B' :
+    v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' :
+    v >= 1e3 ? (v / 1e3).toFixed(2) + 'K' :
+    v.toString();
+  infoVol.textContent = fmtVol(vol);
+  const dvol = vol * (typeof bar.close === 'number' ? bar.close : 0);
+  infoDVol.textContent = fmtVol(dvol);
+  if (volPaneVol) volPaneVol.textContent = fmtVol(vol);
+  if (volPaneDVol) volPaneDVol.textContent = fmtVol(dvol);
+
+  // MA values (stable width)
+  if (infoMA) {
+    const keyTime = bar.time || timeStr;
+    const tfBars = resampleBars(currentBars, currentTF);
+    const parts = [];
+    for (const m of maList) {
+      if (!m?.enabled) continue;
+      const vCached = m._dataMap?.get(keyTime);
+      let v = (typeof vCached === 'number' && Number.isFinite(vCached)) ? vCached : null;
+      if (v == null) {
+        const data = getMaData(tfBars, m.type, m.period);
+        const vv = data.find(p => p.time === keyTime)?.value;
+        if (typeof vv === 'number' && Number.isFinite(vv)) v = vv;
+      }
+      if (v != null) {
+        const lbl = `${m.type}${m.period}:`;
+        const val = v.toFixed(2);
+        parts.push(
+          `<span class="ma-entry" style="color:${m.color || '#f5c842'}">` +
+          `<span class="ma-lbl">${lbl}</span>` +
+          `<span class="ma-val">${val}</span>` +
+          `</span>`
+        );
+      }
+    }
+    infoMA.innerHTML = parts.length ? parts.join('<span class="ma-sep">|</span>') : '—';
+  }
+}
+
+// ==============================================
+// LOG
+// ==============================================
+function setLog(v){
+  isLogScale=v;
+  if(chart)chart.priceScale('right').applyOptions({mode:v?1:0});
+  const btn=document.getElementById('log-toggle');
+  btn.textContent=v?'Linear':'Log';
+  btn.classList.toggle('log-on',v);
+}
+['D','W','M'].forEach(tf=>document.getElementById('tf-'+tf).addEventListener('click',()=>setTimeframe(tf)));
+document.getElementById('log-toggle').addEventListener('click',()=>{setLog(!isLogScale);saveSettings();});
+
+// per-tool popup setup
+['hline','line','ray','seg','text','note'].forEach(tool=>{
+  const cfgBtn=document.getElementById('cfg-'+tool);
+  const popup=document.getElementById('popup-'+tool);
+  if(!cfgBtn||!popup)return;
+  cfgBtn.addEventListener('click',e=>{
+    e.stopPropagation();
+    e.preventDefault();
+    const wasHidden=popup.classList.contains('hidden');
+    document.querySelectorAll('.tool-popup').forEach(p=>p.classList.add('hidden'));
+    if(wasHidden) popup.classList.remove('hidden');
+  });
+  popup.addEventListener('click',e=>e.stopPropagation());
+  popup.addEventListener('mousedown',e=>e.stopPropagation());
+  popup.querySelector('.cfg-color')?.addEventListener('input',e=>{
+    toolSettings[tool].color=e.target.value; syncDrawVars(); saveSettings();
+  });
+  popup.querySelector('.cfg-width')?.addEventListener('change',e=>{
+    toolSettings[tool].width=parseInt(e.target.value); syncDrawVars(); saveSettings();
+  });
+  popup.querySelector('.cfg-style')?.addEventListener('change',e=>{
+    toolSettings[tool].style=e.target.value; syncDrawVars(); saveSettings();
+  });
+  popup.querySelector('.cfg-fontsize')?.addEventListener('change',e=>{
+    toolSettings[tool].fontSize=parseInt(e.target.value); syncDrawVars(); saveSettings();
+  });
+});
+document.addEventListener('click',e=>{ if(!e.target.closest('.tool-group')) document.querySelectorAll('.tool-popup').forEach(p=>p.classList.add('hidden')); });
+
+// ==============================================
+// TIMEFRAME RESAMPLING
+// ==============================================
+function resampleBars(bars, tf){
+  if(tf==='D') return bars;
+  const isWeekly = tf==='W';
+
+  function getPeriodKey(dateStr){
+    const d=new Date(dateStr);
+    if(isWeekly){
+      const day=d.getUTCDay()||7;
+      const mon=new Date(d);
+      mon.setUTCDate(d.getUTCDate()-(day-1));
+      return mon.toISOString().slice(0,10);
+    } else {
+      return dateStr.slice(0,7)+'-01';
+    }
+  }
+
+  const groups=new Map();
+  for(const b of bars){
+    const key=getPeriodKey(b.time);
+    if(!groups.has(key)){
+      groups.set(key,{time:key,open:b.open,high:b.high,low:b.low,close:b.close,volume:b.volume});
+    } else {
+      const g=groups.get(key);
+      g.high=Math.max(g.high,b.high);
+      g.low=Math.min(g.low,b.low);
+      g.close=b.close;
+      g.volume+=b.volume;
+    }
+  }
+  return Array.from(groups.values()).sort((a,b)=>a.time.localeCompare(b.time));
+}
+
+function _normalizeCloseTo100(bars, baseTime){
+  if (!bars || !bars.length) return [];
+  let base = null;
+  if (baseTime) {
+    const b = bars.find(x => x && x.time && x.time >= baseTime && x.close != null && Number.isFinite(x.close) && x.close > 0);
+    base = b ? Number(b.close) : null;
+  }
+  if (!base) {
+    const first = bars.find(x => x && x.close != null && Number.isFinite(x.close) && x.close > 0);
+    base = first ? Number(first.close) : null;
+  }
+  if (!base) return [];
+  return bars
+    .filter(b => b && b.time && b.close != null && Number.isFinite(Number(b.close)) && Number(b.close) > 0)
+    .map(b => ({ time: b.time, value: (Number(b.close) / base) * 100 }));
+}
+
+function _normalizeOhlcTo100(bars, baseTime){
+  if (!bars || !bars.length) return [];
+  let base = null;
+  if (baseTime) {
+    const b = bars.find(x => x && x.time && x.time >= baseTime && [x.open,x.high,x.low,x.close].every(v => v != null && Number.isFinite(v) && v > 0));
+    base = b ? Number(b.close) : null;
+  }
+  if (!base) {
+    const first = bars.find(x => x && [x.open,x.high,x.low,x.close].every(v => v != null && Number.isFinite(v) && v > 0));
+    base = first ? Number(first.close) : null;
+  }
+  if (!base) return [];
+  const out = [];
+  for (const b of bars) {
+    if (!b || !b.time) continue;
+    const o = Number(b.open), h = Number(b.high), l = Number(b.low), c = Number(b.close);
+    if (![o,h,l,c].every(v => Number.isFinite(v) && v > 0)) continue;
+    out.push({
+      time: b.time,
+      open:  o / base * 100,
+      high:  h / base * 100,
+      low:   l / base * 100,
+      close: c / base * 100,
+    });
+  }
+  return out;
+}
+
+async function ensureSpyBars(){
+  if (spyBars && Array.isArray(spyBars) && spyBars.length) return spyBars;
+  try {
+    const resp = await fetch('/api/ohlcv?symbol=SPY');
+    const data = await resp.json();
+    if (data && data.error) throw new Error(data.error);
+    spyBars = Array.isArray(data) ? data : [];
+    return spyBars;
+  } catch (e) {
+    spyBars = [];
+    return spyBars;
+  }
+}
+
+function setSpyOverlayEnabled(v, skipSave=false){
+  spyOverlayEnabled = !!v;
+  spyToggle?.classList.toggle('active', spyOverlayEnabled);
+  try { updateSpyOverlay(); } catch (e) {}
+  if (!skipSave) saveSettings();
+}
+
+function setSpyOverlayMode(next, skipSave=false){
+  const m = (next || '').toString().toLowerCase();
+  spyOverlayMode = (m === 'line' || m === 'candle' || m === 'bar') ? m : 'line';
+  try { updateSpyOverlay(); } catch (e) {}
+  if (!skipSave) saveSettings();
+}
+
+function updateSpyOverlay(){
+  if (!chart) return;
+
+  // If off, clear all overlay series.
+  if (!spyOverlayEnabled) {
+    try { spyLineSeries?.setData([]); } catch (e) {}
+    try { spyCandleSeries?.setData([]); } catch (e) {}
+    try { spyBarSeries?.setData([]); } catch (e) {}
+    return;
+  }
+
+  // Don't show overlay on SPY itself.
+  if ((currentSymbol || '').toUpperCase() === 'SPY') {
+    try { spyLineSeries?.setData([]); } catch (e) {}
+    try { spyCandleSeries?.setData([]); } catch (e) {}
+    try { spyBarSeries?.setData([]); } catch (e) {}
+    return;
+  }
+
+  // Don't auto-fetch when no symbol is selected yet.
+  if (!currentBars || !currentBars.length) return;
+
+  // If we don't have data yet, fetch async and re-apply.
+  if (!spyBars || !spyBars.length) {
+    ensureSpyBars().then(() => { try { updateSpyOverlay(); } catch (e) {} });
+    return;
+  }
+
+  const tfBars = resampleBars(spyBars, currentTF);
+  if (!tfBars || !tfBars.length) return;
+
+  const baseTime = spyVisibleFromTime || null;
+
+  // Clear all, then draw only the active mode.
+  try { spyLineSeries?.setData([]); } catch (e) {}
+  try { spyCandleSeries?.setData([]); } catch (e) {}
+  try { spyBarSeries?.setData([]); } catch (e) {}
+
+  if (spyOverlayMode === 'candle' || spyOverlayMode === 'bar') {
+    const ohlc = _normalizeOhlcTo100(tfBars, baseTime);
+    if (spyOverlayMode === 'candle') {
+      try { spyCandleSeries?.setData(ohlc); } catch (e) {}
+    } else {
+      try { spyBarSeries?.setData(ohlc); } catch (e) {}
+    }
+    return;
+  }
+
+  const data = _normalizeCloseTo100(tfBars, baseTime);
+  try { spyLineSeries?.setData(data); } catch (e) {}
+}
+
+function setTimeframe(tf){
+  currentTF=tf;
+  ['D','W','M'].forEach(t=>document.getElementById('tf-'+t).classList.toggle('active',t===tf));
+  if(activeIdx>=0) selectRow(activeIdx);
+}
+
+function applyTimeframe(){
+  const bars=resampleBars(currentBars, currentTF);
+  // Compute base normalization window (left edge) from the selected row's low/high dates.
+  // This keeps the SPY overlay comparable when we later setVisibleRange().
+  spyVisibleFromTime = null;
+  spyVisibleToTime = null;
+  if (currentMoveRow && bars && bars.length && currentMoveRow.low_date && currentMoveRow.high_date) {
+    const tfBars = bars;
+    const findBar = t => tfBars.find(b=>b.time===t) || tfBars.reduce((best,b)=>b.time.localeCompare(t)<0?b:best, tfBars[0]);
+    const sb = findBar(currentMoveRow.low_date);
+    const eb = findBar(currentMoveRow.high_date);
+    if (sb && eb) {
+      const times = tfBars.map(b=>b.time);
+      const si = times.indexOf(sb.time);
+      const ei = times.indexOf(eb.time);
+      if (si >= 0 && ei >= 0) {
+        const left = Math.min(si, ei);
+        const right = Math.max(si, ei);
+        const pad = Math.max(5, Math.round((right - left) * 0.2));
+        spyVisibleFromTime = tfBars[Math.max(0, left - pad)].time;
+        spyVisibleToTime = tfBars[Math.min(tfBars.length - 1, right + pad)].time;
+      }
+    }
+  }
+  const ohlc = bars.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close}));
+  if (chartType === 'ohlc') {
+    ohlcSeries?.setData(ohlc);
+    candleSeries?.setData([]);
+    priceSeries = ohlcSeries || candleSeries;
+  } else {
+    candleSeries?.setData(ohlc);
+    ohlcSeries?.setData([]);
+    priceSeries = candleSeries || ohlcSeries;
+  }
+  volSeries.setData(bars.map(b=>({
+    time:b.time,
+    value:b.volume,
+    // Match candle colors (not theme tints)
+    color:b.close>=b.open ? (priceColors?.up || '#26a69a') : (priceColors?.down || '#ef5350')
+  })));
+  const tempBars=bars;
+  maList.forEach(m=>{
+    if(!m.series)return;
+    m.series.setData(m.enabled?getMaData(tempBars,m.type,m.period):[]);
+  });
+  applyMoveMarkers();
+  try { updateSpyOverlay(); } catch (e) {}
+  redrawAll();
+}
+
+function applyMoveMarkers(){
+  // Re-apply series markers after setData() calls (e.g. when toggling volume pane).
+  if(!currentMoveRow || !currentBars || !currentBars.length) return;
+  if(!priceSeries) return;
+
+  const r = currentMoveRow;
+  const tfBars = resampleBars(currentBars, currentTF);
+  if(!tfBars || !tfBars.length) return;
+
+  const findBar = t => tfBars.find(b=>b.time===t) || tfBars.reduce((best,b)=>b.time.localeCompare(t)<0?b:best, tfBars[0]);
+  const sb = findBar(r.low_date);
+  const eb = findBar(r.high_date);
+  if(!sb || !eb) return;
+
+  try{
+    priceSeries.setMarkers([
+      {time:sb.time,position:'belowBar',color:'#00d4aa',shape:'arrowUp', text:`▶ Low ${r.low_date} $${r.low_price}`},
+      {time:eb.time,position:'aboveBar',color:'#ff6b35',shape:'arrowDown',text:`◀ High ${r.high_date} +${parseFloat(r.gain_pct).toFixed(0)}%`},
+    ]);
+  }catch(e){}
+}
+
+// ==============================================
+// CANVAS DRAW
+// ==============================================
+const canvas=document.getElementById('draw-canvas');
+const ctx2=canvas.getContext('2d');
+ctx2.imageSmoothingEnabled=true;
+
+function resizeCanvas(){
+  const w=document.getElementById('chart-wrap');
+  canvas.width=w.clientWidth;canvas.height=w.clientHeight;
+  ctx2.imageSmoothingEnabled=true;
+  redrawAll();
+}
+
+const price2p=p=>priceSeries?.priceToCoordinate(p)??null;
+
+function time2p(t){
+  if(!chart||!t) return null;
+  const direct=chart.timeScale().timeToCoordinate(t);
+  if(direct!=null) return direct;
+  if(!currentBars.length) return null;
+  const resampled=resampleBars(currentBars, currentTF);
+  let best=null, bestDiff=Infinity;
+  for(const b of resampled){
+    const d=Math.abs(new Date(b.time)-new Date(t));
+    if(d<bestDiff){ bestDiff=d; best=b.time; }
+  }
+  if(!best) return null;
+  return chart.timeScale().timeToCoordinate(best);
+}
+
+function redrawAll(){
+  ctx2.clearRect(0,0,canvas.width,canvas.height);
+  if(currentSymbol&&drawings[currentSymbol])
+    for(const d of drawings[currentSymbol])drawOne(d,d.id===selectedId);
+  if(pendingP1)drawPreview();
+  if(measureStart)drawMeasure();
+}
+
+function drawPreview(){
+  if(!pendingP1)return;
+  const x1=time2p(pendingP1.time),y1=price2p(pendingP1.price);
+  if(x1==null||y1==null)return;
+  ctx2.save();
+  ctx2.globalAlpha=0.75;
+  ctx2.strokeStyle=drawColor;ctx2.lineWidth=drawWidth;ctx2.setLineDash([5,4]);
+  ctx2.beginPath();
+  if(drawTool==='ray'){
+    const dx=previewMouseX-x1,dy=previewMouseY-y1,len=Math.sqrt(dx*dx+dy*dy)||1;
+    ctx2.moveTo(x1,y1);ctx2.lineTo(x1+(dx/len)*canvas.width*3,y1+(dy/len)*canvas.width*3);
+  } else if(drawTool==='line'){
+    const dx=previewMouseX-x1,dy=previewMouseY-y1,len=Math.sqrt(dx*dx+dy*dy)||1;
+    ctx2.moveTo(x1-(dx/len)*canvas.width*3,y1-(dy/len)*canvas.width*3);
+    ctx2.lineTo(x1+(dx/len)*canvas.width*3,y1+(dy/len)*canvas.width*3);
+  } else {
+    ctx2.moveTo(x1,y1);ctx2.lineTo(previewMouseX,previewMouseY);
+  }
+  ctx2.stroke();ctx2.setLineDash([]);
+  ctx2.beginPath();ctx2.arc(x1,y1,5,0,Math.PI*2);ctx2.fillStyle=drawColor;ctx2.fill();
+  ctx2.beginPath();ctx2.arc(previewMouseX,previewMouseY,4,0,Math.PI*2);ctx2.globalAlpha=0.5;ctx2.fillStyle=drawColor;ctx2.fill();
+  ctx2.restore();
+}
+
+function getCanvasTextLineHeight(fontSize){
+  const inputEl = document.getElementById('txt-input');
+  const fs = fontSize || 12;
+  if (!inputEl) return fs * 1.4;
+  try{
+    const cs = window.getComputedStyle(inputEl);
+    const lh = parseFloat(cs.lineHeight || '');
+    if (Number.isFinite(lh) && lh > 0) return lh;
+  }catch(e){}
+  return fs * 1.4;
+}
+
+function drawOne(d,sel=false){
+  const col=d.color||'#ffffff';
+  const c=sel?'#ffdd00':col;
+  ctx2.save();ctx2.globalAlpha=sel?1:0.88;
+  const lw=sel?(d.width||2)+1:(d.width||2);
+  const applyLineStyle=(s)=>{
+    if(s==='dash') ctx2.setLineDash([lw*4,lw*3]);
+    else if(s==='dot') ctx2.setLineDash([lw,lw*2]);
+    else ctx2.setLineDash([]);
+  };
+  if(d.type==='hline'){
+    const y=price2p(d.price);if(y==null){ctx2.restore();return;}
+    ctx2.strokeStyle=c;ctx2.lineWidth=lw;
+    applyLineStyle(d.style);
+    ctx2.beginPath();ctx2.moveTo(0,y);ctx2.lineTo(canvas.width,y);ctx2.stroke();
+    ctx2.setLineDash([]);
+    ctx2.fillStyle=c;ctx2.font='10px IBM Plex Mono,monospace';
+    ctx2.fillText(d.price.toFixed(2),canvas.width-62,y-3);
+    ctx2.beginPath();ctx2.arc(20,y,sel?5:3,0,Math.PI*2);ctx2.fill();
+  }
+  else if(d.type==='ray'||d.type==='seg'||d.type==='line'){
+    const x1=time2p(d.p1.time),y1=price2p(d.p1.price);
+    const x2=time2p(d.p2.time),y2=price2p(d.p2.price);
+    if(x1==null||y1==null||x2==null||y2==null){ctx2.restore();return;}
+    ctx2.strokeStyle=c;ctx2.lineWidth=lw;
+    applyLineStyle(d.style);
+    ctx2.beginPath();
+    if(d.type==='ray'){
+      const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy)||1;
+      ctx2.moveTo(x1,y1);ctx2.lineTo(x1+(dx/len)*canvas.width*3,y1+(dy/len)*canvas.width*3);
+    } else if(d.type==='line'){
+      const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy)||1;
+      ctx2.moveTo(x1-(dx/len)*canvas.width*3,y1-(dy/len)*canvas.width*3);
+      ctx2.lineTo(x1+(dx/len)*canvas.width*3,y1+(dy/len)*canvas.width*3);
+    } else {ctx2.moveTo(x1,y1);ctx2.lineTo(x2,y2);}
+    ctx2.stroke();ctx2.setLineDash([]);
+    // seg：不画端点圆点；ray/extended line：仅在“选中(sel=true)”时画两个端点圆点
+    if(sel && (d.type === 'ray' || d.type === 'line')){
+      [x1,x2].forEach((hx,i)=>{const hy=i===0?y1:y2;ctx2.beginPath();ctx2.arc(hx,hy,5,0,Math.PI*2);ctx2.fillStyle=c;ctx2.fill();});
+    }
+  }
+  else if(d.type==='text'){
+    const x=time2p(d.time),y=price2p(d.price);if(x==null||y==null){ctx2.restore();return;}
+    const fs=d.fontSize||12;
+    const ff='Arial';
+    ctx2.font=`${fs}px ${ff},monospace`;
+    ctx2.textBaseline='top';
+    ctx2.textAlign='left';
+    ctx2.fillStyle=c;
+    const lines=d.text.split('\n');
+    const lh = getCanvasTextLineHeight(fs);
+    lines.forEach((line,i)=>ctx2.fillText(line, Math.round(x), Math.round(y+i*lh)));
+  }
+  else if(d.type==='note'){
+    const x1=time2p(d.p1.time),y1=price2p(d.p1.price);
+    const x2=time2p(d.p2.time),y2=price2p(d.p2.price);
+    if(x1==null||y1==null||x2==null||y2==null){ctx2.restore();return;}
+    const fs=d.fontSize||12;
+    const lines=(d.text||'Note').split('\n');
+    ctx2.font=`${fs}px Arial,monospace`;
+    const lh=getCanvasTextLineHeight(fs);
+    let maxW=0;
+    for(const line of lines){ maxW=Math.max(maxW, ctx2.measureText(line).width); }
+    const pad=6;
+    const left=Math.round(x2), top=Math.round(y2);
+    const boxW=Math.max(24, Math.ceil(maxW+pad*2));
+    const boxH=Math.max(18, Math.ceil(lines.length*lh+pad*2));
+    const cx = left + boxW * 0.5;
+    const cy = top + boxH * 0.5;
+    const isHorizInside = x1 >= left && x1 <= (left + boxW);
+    const anchorX = isHorizInside ? cx : (x1 >= cx ? (left + boxW) : left);
+    const anchorY = y1 >= cy ? (top + boxH) : top;
+    ctx2.strokeStyle=c;ctx2.lineWidth=lw;
+    applyLineStyle(d.style);
+    ctx2.beginPath();ctx2.moveTo(x1,y1);ctx2.lineTo(anchorX,anchorY);ctx2.stroke();ctx2.setLineDash([]);
+    ctx2.fillStyle=c;ctx2.textBaseline='top';ctx2.textAlign='left';
+    lines.forEach((line,i)=>ctx2.fillText(line,left+pad,top+pad+i*lh));
+    if(sel){
+      ctx2.beginPath();ctx2.arc(x1,y1,5,0,Math.PI*2);ctx2.fillStyle=c;ctx2.fill();
+      ctx2.beginPath();ctx2.arc(x2,y2,5,0,Math.PI*2);ctx2.fillStyle=c;ctx2.fill();
+    }
+  }
+  ctx2.restore();
+}
+
+function drawMeasure(){
+  if(!measureStart)return;
+  const x1=time2p(measureStart.time), y1=price2p(measureStart.price);
+  const x2=previewMouseX, y2=previewMouseY;
+  if(x1==null||y1==null)return;
+
+  const endPrice=priceSeries?.coordinateToPrice(y2);
+  if(!endPrice)return;
+
+  const priceDiff=endPrice-measureStart.price;
+  const pct=(priceDiff/measureStart.price*100).toFixed(2);
+  const sign=priceDiff>=0?'+':'';
+  const color=priceDiff>=0?'#26a69a':'#ef5350';
+
+  let bars=0;
+  if(currentBars.length){
+    const nearestBar=(px)=>{
+      let best=-1,bestDist=Infinity;
+      for(let i=0;i<currentBars.length;i++){
+        const bx=time2p(currentBars[i].time);
+        if(bx==null)continue;
+        const d=Math.abs(bx-px);
+        if(d<bestDist){bestDist=d;best=i;}
+      }
+      return best;
+    };
+    const si=nearestBar(x1);
+    const ei=nearestBar(x2);
+    if(si>=0&&ei>=0) bars=Math.abs(ei-si);
+  }
+
+  ctx2.save();
+
+  const rx=Math.min(x1,x2), ry=Math.min(y1,y2);
+  const rw=Math.abs(x2-x1), rh=Math.abs(y2-y1);
+  ctx2.fillStyle=priceDiff>=0?'rgba(38,166,154,0.08)':'rgba(239,83,80,0.08)';
+  ctx2.fillRect(rx,ry,rw,rh);
+  ctx2.strokeStyle=color;
+  ctx2.lineWidth=1;
+  ctx2.setLineDash([4,3]);
+  ctx2.strokeRect(rx,ry,rw,rh);
+  ctx2.setLineDash([]);
+
+  const label=`${sign}${pct}%  ${bars}bars`;
+  // Match chart axis/crosshair UI font
+  ctx2.font='bold 12px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
+  const lw=ctx2.measureText(label).width;
+  const lx=rx+rw/2-lw/2;
+  const ly=ry+rh/2+5;
+  ctx2.fillStyle='rgba(10,12,15,0.85)';
+  ctx2.fillRect(lx-6,ly-14,lw+12,20);
+  ctx2.fillStyle=color;
+  ctx2.fillText(label,lx,ly);
+
+  ctx2.font='10px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
+  ctx2.fillStyle=color;
+  ctx2.fillText(measureStart.price.toFixed(2),x1+4,y1-3);
+  ctx2.fillText(endPrice.toFixed(2),x2+4,y2-3);
+
+  ctx2.restore();
+}
+
+// ==============================================
+// TOOL SETUP
+// ==============================================
+const TOOLS=['pan','hline','line','ray','seg','text','note','measure'];
+function setTool(t){
+  drawTool=t;pendingP1=null;
+  document.getElementById('hint').classList.add('hidden');
+  if(t!=='measure'){measureStart=null;measureEnd=null;}
+  TOOLS.forEach(id=>document.getElementById('tool-'+id).classList.toggle('active',id===t));
+  syncDrawVars();
+}
+TOOLS.forEach(t=>document.getElementById('tool-'+t).addEventListener('click',()=>setTool(t)));
+document.getElementById('tool-clear').addEventListener('click',()=>{
+  if(!currentSymbol)return;
+  drawings[currentSymbol]=[];selectedId=null;redrawAll();saveDrawings();
+});
+
+// ==============================================
+// CHART EVENTS
+// ==============================================
+function setupChartEvents(){
+  const chartEl=document.getElementById('chart');
+
+  function setChartInteraction(enabled){
+    chart.applyOptions({
+      handleScroll: enabled,
+      handleScale:  enabled,
+    });
+  }
+
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const formatOverlayTimeLabel = (t) => {
+    try{
+      if (typeof t === 'string') {
+        const iso = t.length >= 10 ? t.slice(0, 10) : t;
+        const yy = iso.slice(0, 4);
+        const mm = iso.slice(5, 7);
+        const dd = iso.slice(8, 10) || '01';
+        const mi = Math.max(0, Math.min(11, parseInt(mm, 10) - 1));
+        const mon = monthNames[mi] || 'Jan';
+        return `${parseInt(dd, 10)} ${mon} '${yy.slice(2)}`;
+      } else if (typeof t === 'number') {
+        const d = new Date(t * 1000);
+        const day = d.getUTCDate();
+        const mon = monthNames[d.getUTCMonth()] || 'Jan';
+        const yy2 = String(d.getUTCFullYear()).slice(2);
+        return `${day} ${mon} '${yy2}`;
+      } else if (t && typeof t === 'object' && t.year) {
+        const mi = Math.max(0, Math.min(11, parseInt(String(t.month), 10) - 1));
+        const mon = monthNames[mi] || 'Jan';
+        const dd = (t.day || 1);
+        const yy2 = String(t.year).slice(2);
+        return `${dd} ${mon} '${yy2}`;
+      }
+    }catch(e){}
+    return '';
+  };
+
+  chart.subscribeCrosshairMove(param=>{
+    if (!param || !param.point) {
+      // Mouse moved out of chart - clear info bar
+      updateCrosshairInfo(null);
+      window._setCrosshairX?.(null);
+      return;
+    }
+    
+    previewMouseX = param.point.x;
+    previewMouseY = param.point.y;
+
+    // Update custom crosshair overlay: snap X to bar center via timeToCoordinate.
+    try{
+      const label = formatOverlayTimeLabel(param.time);
+      let xCoord = null;
+      try { xCoord = chart.timeScale().timeToCoordinate(param.time); } catch(e) {}
+      const yOverlay = param.point.y + overlayMainOffsetY;
+      if (xCoord != null && Number.isFinite(xCoord)) window._setCrosshairX?.(xCoord, label, yOverlay);
+      else window._setCrosshairX?.(param.point.x, label, yOverlay);
+    }catch(e){}
+    
+    if (pendingP1 || measureStart) redrawAll();
+    if (drawTool === 'pan') {
+      const hit = hitTest(param.point.x, param.point.y);
+      chartEl.style.cursor = hit != null ? (hit === selectedId ? 'move' : 'pointer') : '';
+    }
+    
+    // Update crosshair info with current data
+    updateCrosshairInfo(param);
+  });
+
+  // If volume pane is enabled, allow overlay to update while hovering the volume chart.
+  try{
+    if (volChart) {
+      volChart.subscribeCrosshairMove(param=>{
+        if(!param || !param.point){
+          // window._setCrosshairX?.(null);
+          return;
+        }
+        try{
+          const label = formatOverlayTimeLabel(param.time);
+          let xCoord = null;
+          try { xCoord = volChart.timeScale().timeToCoordinate(param.time); } catch(e) {}
+          const yOverlay = param.point.y + overlayVolOffsetY;
+          if (xCoord != null && Number.isFinite(xCoord)) window._setCrosshairX?.(xCoord, label, yOverlay);
+          else window._setCrosshairX?.(param.point.x, label, yOverlay);
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+
+  chart.subscribeClick(param=>{
+    if(!currentSymbol||drawTool==='pan')return;
+    if(!param.point)return;
+    let price=priceSeries?.coordinateToPrice(param.point.y);
+    if(price==null)return;
+    price=parseFloat(price.toFixed(4));
+    const time=param.time; if(!time)return;
+
+    if(drawTool==='hline'){
+      addDrawing({type:'hline',price,color:drawColor,width:drawWidth,style:drawLineStyle});saveDrawings();
+      setTool('pan');
+    }
+    else if(drawTool==='ray'||drawTool==='seg'||drawTool==='line'||drawTool==='note'){
+      if(!pendingP1){
+        pendingP1={price,time};
+        document.getElementById('hint').classList.remove('hidden');
+        redrawAll();
+      } else {
+        if(drawTool==='note'){
+          const p1=pendingP1;
+          pendingP1=null;
+          document.getElementById('hint').classList.add('hidden');
+          showTextInput(param.point.x,param.point.y,price,time,'',function(txt,payload){
+            addDrawing({
+              type:'note',
+              p1:p1,
+              p2:{price:payload.price,time:payload.time},
+              text:txt,
+              color:toolSettings.note.color,
+              width:toolSettings.note.width||2,
+              style:toolSettings.note.style||'solid',
+              fontSize:toolSettings.note.fontSize||12,
+              fontFamily:'Arial'
+            });
+            saveDrawings();
+          });
+          return;
+        }
+        addDrawing({type:drawTool,p1:pendingP1,p2:{price,time},color:drawColor,width:drawWidth,style:drawLineStyle});
+        pendingP1=null;
+        document.getElementById('hint').classList.add('hidden');
+        saveDrawings();
+        setTool('pan');
+      }
+    }
+    else if(drawTool==='text'){
+      showTextInput(param.point.x,param.point.y,price,time);
+    }
+    else if(drawTool==='measure'){
+      if(!measureStart){
+        measureStart={price,time,x:param.point.x,y:param.point.y};
+        document.getElementById('hint').classList.remove('hidden');
+      } else {
+        measureEnd={price,time,x:param.point.x,y:param.point.y};
+        document.getElementById('hint').classList.add('hidden');
+        measureStart=null; measureEnd=null;
+      }
+    }
+  });
+
+  chart.subscribeClick(param=>{
+    if(drawTool!=='pan'||!currentSymbol||!param.point)return;
+    const x=param.point.x, y=param.point.y;
+    const hit=hitTest(x,y);
+    const newSel=(hit!=null&&hit!==selectedId)?hit:null;
+    if(newSel!==selectedId){
+      selectedId=newSel;
+      setChartInteraction(selectedId===null);
+      redrawAll();
+    }
+  });
+
+  setupDrag();
+
+  chart.timeScale().subscribeVisibleTimeRangeChange(redrawAll);
+  setInterval(redrawAll,200);
+}
+
+function setupDrag(){
+  const wrapEl=document.getElementById('chart-wrap');
+
+  let dragPart='whole';
+  wrapEl.addEventListener('mousedown',e=>{
+    if(drawTool!=='pan'||e.button!==0||!currentSymbol)return;
+    const rect=wrapEl.getBoundingClientRect();
+    const x=e.clientX-rect.left, y=e.clientY-rect.top;
+    let fullHit=hitTestFull(x,y);
+    if(!fullHit){
+      const coarseHit = hitTest(x,y);
+      if(coarseHit!=null) fullHit = { id: coarseHit, part: 'whole' };
+    }
+    if(!fullHit)return;
+    if(selectedId!==fullHit.id){
+      selectedId=fullHit.id;
+      chart.applyOptions({handleScroll:false,handleScale:false});
+      redrawAll();
+    }
+    dragId=fullHit.id;
+    dragPart=fullHit.part;
+    dragStartX=x; dragStartY=y; wasDrag=false;
+    dragOrig=JSON.parse(JSON.stringify(getDrawing(dragId)));
+    e.stopImmediatePropagation();
+    e.preventDefault();
+  },{capture:true});
+
+  document.addEventListener('mousemove',e=>{
+    if(dragId===null)return;
+    const rect=wrapEl.getBoundingClientRect();
+    const x=e.clientX-rect.left, y=e.clientY-rect.top;
+    wasDrag=true;
+    applyDrag(dragId,dragPart,x-dragStartX,y-dragStartY);
+    redrawAll();
+  });
+
+  document.addEventListener('mouseup',e=>{
+    if(dragId!==null){
+      if(wasDrag){ pushUndo(); saveDrawings(); }
+      dragId=null; dragOrig=null;
+      setTimeout(()=>{ wasDrag=false; },50);
+    }
+  });
+
+  wrapEl.addEventListener('dblclick',e=>{
+    if(drawTool!=='pan'||!currentSymbol)return;
+    const rect=wrapEl.getBoundingClientRect();
+    const x=e.clientX-rect.left, y=e.clientY-rect.top;
+    const hit=hitTest(x,y);
+    if(hit==null)return;
+    const d=getDrawing(hit);
+    if(!d||(d.type!=='text' && d.type!=='note'))return;
+    e.preventDefault();
+    e.stopPropagation();
+    pushUndo();
+    drawings[currentSymbol]=drawings[currentSymbol].filter(dd=>dd.id!==hit);
+    selectedId=null;
+    chart.applyOptions({handleScroll:true,handleScale:true});
+    redrawAll();
+    if(d.type==='note'){
+      const px=time2p(d.p2.time)||x;
+      const py=price2p(d.p2.price)||y;
+      toolSettings.note.color=d.color||toolSettings.note.color;
+      toolSettings.note.width=d.width||toolSettings.note.width||2;
+      toolSettings.note.style=d.style||toolSettings.note.style||'solid';
+      toolSettings.note.fontSize=d.fontSize||toolSettings.note.fontSize||12;
+      syncDrawVars();
+      showTextInput(px,py,d.p2.price,d.p2.time,d.text||'',function(txt,payload){
+        addDrawing({
+          type:'note',
+          p1:d.p1,
+          p2:{price:payload.price,time:payload.time},
+          text:txt,
+          color:toolSettings.note.color,
+          width:toolSettings.note.width||2,
+          style:toolSettings.note.style||'solid',
+          fontSize:toolSettings.note.fontSize||12,
+          fontFamily:'Arial'
+        });
+        saveDrawings();
+      });
+      return;
+    }
+    const px=time2p(d.time)||x;
+    const py=price2p(d.price)||y;
+    toolSettings.text.color=d.color||toolSettings.text.color;
+    toolSettings.text.fontSize=d.fontSize||12;
+    syncDrawVars();
+    showTextInput(px,py,d.price,d.time,d.text);
+  });
+}
+
+function getDrawing(id){
+  if(!currentSymbol||!drawings[currentSymbol])return null;
+  return drawings[currentSymbol].find(d=>d.id===id)||null;
+}
+
+function applyDrag(id,part,dx,dy){
+  const d=getDrawing(id); if(!d)return;
+  const o=dragOrig;
+  const toPrice=(origP,ddy)=>{
+    const oy=price2p(origP); if(oy==null)return origP;
+    return parseFloat(((priceSeries?.coordinateToPrice(oy+ddy))||origP).toFixed(4));
+  };
+  const toTime=(origT,ddx)=>{
+    const ox=time2p(origT); if(ox==null)return origT;
+    return chart.timeScale().coordinateToTime(ox+ddx)||origT;
+  };
+  if(d.type==='hline'){
+    d.price=toPrice(o.price,dy);
+  }
+  else if(d.type==='ray'||d.type==='seg'||d.type==='line'||d.type==='note'){
+    if(part==='p1'){
+      d.p1={...d.p1,price:toPrice(o.p1.price,dy),time:toTime(o.p1.time,dx)};
+    } else if(part==='p2'){
+      d.p2={...d.p2,price:toPrice(o.p2.price,dy),time:toTime(o.p2.time,dx)};
+    } else {
+      d.p1={...d.p1,price:toPrice(o.p1.price,dy),time:toTime(o.p1.time,dx)};
+      d.p2={...d.p2,price:toPrice(o.p2.price,dy),time:toTime(o.p2.time,dx)};
+    }
+  }
+  else if(d.type==='text'){
+    d.price=toPrice(o.price,dy);
+    d.time=toTime(o.time,dx);
+  }
+}
+
+const THRESH=8;
+const ENDPOINT_THRESH=10;
+
+function hitTest(mx,my){
+  if(!currentSymbol||!drawings[currentSymbol])return null;
+  for(const d of[...drawings[currentSymbol]].reverse()){
+    if(isHit(d,mx,my))return d.id;
+  }
+  return null;
+}
+
+function hitTestFull(mx,my){
+  if(!currentSymbol||!drawings[currentSymbol])return null;
+  for(const d of[...drawings[currentSymbol]].reverse()){
+    const part=getHitPart(d,mx,my);
+    if(part)return{id:d.id,part};
+  }
+  return null;
+}
+
+function getHitPart(d,mx,my){
+  if(d.type==='hline'){
+    const y=price2p(d.price);
+    if(y==null)return null;
+    return Math.abs(my-y)<THRESH?'whole':null;
+  }
+  if(d.type==='ray'||d.type==='seg'||d.type==='line'||d.type==='note'){
+    const x1=time2p(d.p1.time),y1=price2p(d.p1.price);
+    const x2=time2p(d.p2.time),y2=price2p(d.p2.price);
+    if(x1==null||y1==null||x2==null||y2==null)return null;
+    if(Math.hypot(mx-x1,my-y1)<ENDPOINT_THRESH)return'p1';
+    const p2Thresh = d.type==='note' ? Math.max(ENDPOINT_THRESH, 16) : ENDPOINT_THRESH;
+    if(Math.hypot(mx-x2,my-y2)<p2Thresh)return'p2';
+    if(d.type==='note'){
+      const fs=d.fontSize||12;
+      ctx2.save();
+      ctx2.font=`${fs}px Arial,monospace`;
+      const lines=(d.text||'Note').split('\n');
+      let maxW=0;
+      for(const line of lines){ maxW=Math.max(maxW, ctx2.measureText(line).width); }
+      ctx2.restore();
+      const lh=fs*1.35,pad=6;
+      const left=Math.round(x2), top=Math.round(y2);
+      const boxW=Math.max(24, Math.ceil(maxW+pad*2));
+      const boxH=Math.max(18, Math.ceil(lines.length*lh+pad*2));
+      // Dragging inside note text box moves only the text anchor (p2),
+      // so text and segment end can be repositioned independently.
+      const hitPad = 12;
+      if(mx>=left-hitPad && mx<=left+boxW+hitPad && my>=top-hitPad && my<=top+boxH+hitPad)return'p2';
+      const cx = left + boxW * 0.5;
+      const cy = top + boxH * 0.5;
+      const isHorizInside = x1 >= left && x1 <= (left + boxW);
+      const anchorX = isHorizInside ? cx : (x1 >= cx ? (left + boxW) : left);
+      const anchorY = y1 >= cy ? (top + boxH) : top;
+      if(distSeg(mx,my,x1,y1,anchorX,anchorY)<THRESH)return'whole';
+      return null;
+    }
+    if(distSeg(mx,my,x1,y1,x2,y2)<THRESH)return'whole';
+    return null;
+  }
+  if(d.type==='text'){
+    const x=time2p(d.time),y=price2p(d.price);
+    if(x==null||y==null)return null;
+    const fs=d.fontSize||12;
+    const ff='Arial';
+    ctx2.save();
+    ctx2.font=`${fs}px ${ff},monospace`;
+    const lines=(d.text||'').split('\n');
+    let maxW=0;
+    for(const line of lines){
+      const w=ctx2.measureText(line).width;
+      if(w>maxW) maxW=w;
+    }
+    ctx2.restore();
+    const h=getCanvasTextLineHeight(fs)*lines.length;
+    const pad=4;
+    const left=x-pad, top=y-pad, right=x+maxW+pad, bottom=y+h+pad;
+    return (mx>=left && mx<=right && my>=top && my<=bottom)?'whole':null;
+  }
+  return null;
+}
+
+function isHit(d,mx,my){ return getHitPart(d,mx,my)!==null; }
+function distSeg(px,py,x1,y1,x2,y2){
+  const dx=x2-x1,dy=y2-y1,len2=dx*dx+dy*dy;
+  if(len2===0)return Math.hypot(px-x1,py-y1);
+  const t=Math.max(0,Math.min(1,((px-x1)*dx+(py-y1)*dy)/len2));
+  return Math.hypot(px-(x1+t*dx),py-(y1+t*dy));
+}
+
+function pushUndo(){
+  if(!currentSymbol)return;
+  const snapshot=JSON.parse(JSON.stringify(drawings[currentSymbol]||[]));
+  undoHistory.push({symbol:currentSymbol,snapshot});
+  if(undoHistory.length>50)undoHistory.shift();
+}
+
+function addDrawing(d){
+  if(!currentSymbol)return;
+  pushUndo();
+  if(!drawings[currentSymbol])drawings[currentSymbol]=[];
+  d.id=++drawIdCtr;drawings[currentSymbol].push(d);redrawAll();
+}
+
+// ==============================================
+// TEXT INPUT
+// ==============================================
+function showTextInput(px,py,price,time,initialText='',onConfirm){
+  const wrap=document.getElementById('txt-wrap'),inp=document.getElementById('txt-input');
+  const fs=(drawFontSize||toolSettings.text.fontSize||12);
+  inp.style.fontSize=fs+'px';
+  inp.style.fontFamily='Arial, sans-serif';
+  wrap.style.display='block';wrap.style.left=Math.round(px)+'px';wrap.style.top=Math.round(py)+'px';
+  inp.value='';
+  setTimeout(()=>inp.focus(),30);
+  inp.value=initialText;
+  inp.oninput=()=>{
+    inp.style.height='auto';
+    inp.style.height=inp.scrollHeight+'px';
+  };
+  setTimeout(()=>{inp.style.height='auto';inp.style.height=inp.scrollHeight+'px';},10);
+  const closeIfEmpty = () => {
+    if (wrap.style.display === 'none') return;
+    const txt = (inp.value || '').trim();
+    wrap.style.display = 'none';
+    if (txt) {
+      if(typeof onConfirm === 'function'){
+        onConfirm(txt, { price, time });
+      } else {
+        addDrawing({type:'text',price,time,text:txt,color:toolSettings.text.color,fontSize:toolSettings.text.fontSize||12,fontFamily:'Arial'});
+        saveDrawings();
+      }
+    }
+    setTool('pan');
+    chart?.applyOptions({ handleScroll: true, handleScale: true });
+  };
+  const onDocPointerDown = (e) => {
+    if (wrap.style.display === 'none') return;
+    if (wrap.contains(e.target)) return;
+    closeIfEmpty();
+    document.removeEventListener('pointerdown', onDocPointerDown, true);
+  };
+  if (document._txtOutsideHandler) {
+    document.removeEventListener('pointerdown', document._txtOutsideHandler, true);
+  }
+  document._txtOutsideHandler = onDocPointerDown;
+  document.addEventListener('pointerdown', onDocPointerDown, true);
+  inp.onkeydown=ev=>{
+    ev.stopPropagation(); // never let keystrokes leak out of the text input
+    if(ev.key==='Enter'&&!ev.shiftKey){
+      ev.preventDefault();
+      const txt=inp.value.trim();
+      wrap.style.display='none';
+      if(txt){
+        if(typeof onConfirm === 'function'){
+          onConfirm(txt, { price, time });
+        } else {
+          addDrawing({type:'text',price,time,text:txt,color:toolSettings.text.color,fontSize:toolSettings.text.fontSize||12,fontFamily:'Arial'});
+          saveDrawings();
+        }
+      }
+      setTool('pan');
+      document.removeEventListener('pointerdown', onDocPointerDown, true);
+    }
+    if(ev.key==='Escape'){
+      ev.preventDefault();
+      wrap.style.display='none';
+      setTool('pan');
+      chart?.applyOptions({handleScroll:true,handleScale:true});
+      document.removeEventListener('pointerdown', onDocPointerDown, true);
+    }
+  };
+}
+
+// ==============================================
+// KEYBOARD
+// ==============================================
+document.addEventListener('keydown',e=>{
+  const inInput=document.activeElement===document.getElementById('txt-input')
+    ||document.activeElement.tagName==='INPUT'
+    ||document.activeElement.tagName==='SELECT';
+  if((e.key==='Delete'||e.key==='Backspace')&&selectedId!=null&&!inInput){
+    if(!currentSymbol||!drawings[currentSymbol])return;
+    pushUndo();
+    drawings[currentSymbol]=drawings[currentSymbol].filter(d=>d.id!==selectedId);
+    selectedId=null;
+    chart.applyOptions({handleScroll:true,handleScale:true});
+    redrawAll();saveDrawings();
+    return;
+  }
+  if(!inInput && e.altKey && !e.ctrlKey && !e.metaKey){
+    const keyMap={'v':'pan','h':'hline','a':'line','r':'ray','s':'seg','t':'text','n':'note','m':'measure'};
+    if(keyMap[e.key.toLowerCase()]){
+      e.preventDefault();
+      setTool(keyMap[e.key.toLowerCase()]);
+      return;
+    }
+  }
+  if(e.key==='Escape'&&!inInput){
+    setTool('pan');
+    chart.applyOptions({handleScroll:true,handleScale:true});
+    return;
+  }
+
+  if((e.key==='z'||e.key==='Z')&&(e.ctrlKey||e.metaKey)&&!inInput){
+    e.preventDefault();
+    if(!currentSymbol||!undoHistory.length)return;
+    for(let i=undoHistory.length-1;i>=0;i--){
+      if(undoHistory[i].symbol===currentSymbol){
+        drawings[currentSymbol]=JSON.parse(JSON.stringify(undoHistory[i].snapshot));
+        undoHistory.splice(i,1);
+        selectedId=null;
+        chart.applyOptions({handleScroll:true,handleScale:true});
+        redrawAll();saveDrawings();
+        flash('Undo');
+        return;
+      }
+    }
+    return;
+  }
+
+  if((e.key==='ArrowUp'||e.key==='ArrowDown')&&!inInput){
+    e.preventDefault();
+    if(!filtered.length)return;
+    activeIdx=e.key==='ArrowDown'
+      ?(activeIdx<filtered.length-1?activeIdx+1:0)
+      :(activeIdx>0?activeIdx-1:filtered.length-1);
+    selectRow(activeIdx);
+  }
+});
+
+// ==============================================
+// CHART INIT
+// ==============================================
+function initChart(){
+  const el=document.getElementById('chart');
+  const wrap=document.getElementById('chart-wrap');
+  const w=wrap.clientWidth||window.innerWidth*0.7;
+  const h=wrap.clientHeight||window.innerHeight-96;
+  const bgColor = isLightTheme ? '#ffffff' : '#0a0c0f';
+  const textColor = isLightTheme ? '#1a1f2e' : '#e8f0f8';
+  const borderColor = isLightTheme ? '#d0d7dd' : '#1f2833';
+
+  // Crosshair overlay canvas setup (covers main chart + volume pane).
+  crosshairOverlayCanvas = document.getElementById('crosshair-overlay');
+  crosshairOverlayCtx = crosshairOverlayCanvas ? crosshairOverlayCanvas.getContext('2d') : null;
+
+  function resizeCrosshairOverlay(){
+    if (!crosshairOverlayCanvas || !crosshairOverlayCtx) return;
+    const host = document.querySelector('.chart-container');
+    if (!host) return;
+    const rect = host.getBoundingClientRect();
+
+    // Offsets so we can convert main/volume crosshair y into overlay coordinates
+    try{
+      const chartEl = document.getElementById('chart');
+      if (chartEl) overlayMainOffsetY = chartEl.getBoundingClientRect().top - rect.top;
+      const volPaneEl2 = document.getElementById('vol-pane');
+      if (volPaneEl2) overlayVolOffsetY = volPaneEl2.getBoundingClientRect().top - rect.top;
+    }catch(e){}
+
+    const cw = Math.max(1, Math.round(rect.width));
+    const ch = Math.max(1, Math.round(rect.height));
+    const dpr = window.devicePixelRatio || 1;
+    crosshairOverlayDpr = dpr;
+
+    crosshairOverlayCanvas.width = Math.round(cw * dpr);
+    crosshairOverlayCanvas.height = Math.round(ch * dpr);
+    crosshairOverlayCanvas.style.width = cw + 'px';
+    crosshairOverlayCanvas.style.height = ch + 'px';
+    drawCrosshairOverlay();
+  }
+
+  function drawCrosshairOverlay(){
+    if (!crosshairOverlayCanvas || !crosshairOverlayCtx) return;
+    const ctx = crosshairOverlayCtx;
+    ctx.clearRect(0, 0, crosshairOverlayCanvas.width, crosshairOverlayCanvas.height);
+    if (crosshairOverlayX == null && crosshairOverlayY == null) return;
+
+    const wPx = crosshairOverlayCanvas.width;
+    const hPx = crosshairOverlayCanvas.height;
+
+    // Keep xPx available for the time bubble even when only y is present.
+    const xPxForBubble = (crosshairOverlayX != null && Number.isFinite(crosshairOverlayX))
+      ? Math.round(crosshairOverlayX * crosshairOverlayDpr)
+      : Math.round(wPx / 2);
+
+    // Thin dashed white lines (vertical + horizontal)
+    ctx.strokeStyle = 'rgba(255,255,255,0.70)';
+    ctx.lineWidth = 1 * crosshairOverlayDpr;
+    ctx.setLineDash([6 * crosshairOverlayDpr, 6 * crosshairOverlayDpr]);
+
+    if (crosshairOverlayX != null) {
+      const xPx = Math.round(crosshairOverlayX * crosshairOverlayDpr);
+      ctx.beginPath();
+      ctx.moveTo(xPx + 0.5, 0);
+      ctx.lineTo(xPx + 0.5, hPx);
+      ctx.stroke();
+    }
+
+    if (crosshairOverlayY != null) {
+      const yPx = Math.round(crosshairOverlayY * crosshairOverlayDpr);
+      ctx.beginPath();
+      ctx.moveTo(0, yPx + 0.5);
+      ctx.lineTo(wPx, yPx + 0.5);
+      ctx.stroke();
+    }
+
+    ctx.setLineDash([]);
+
+    // Date bubble at bottom
+    if (crosshairOverlayLabel) {
+      ctx.save();
+      const label = crosshairOverlayLabel;
+      const fontSize = 12 * crosshairOverlayDpr;
+      ctx.font = `${fontSize}px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif`;
+      const paddingX = 9 * crosshairOverlayDpr;
+      const paddingY = 6 * crosshairOverlayDpr;
+      const textWidth = ctx.measureText(label).width;
+      const boxWidth = textWidth + paddingX * 2;
+      const boxHeight = fontSize + paddingY * 2;
+
+      const yPx = hPx - boxHeight - 4 * crosshairOverlayDpr;
+      let boxX = xPxForBubble - boxWidth / 2;
+      boxX = Math.max(4 * crosshairOverlayDpr, Math.min(boxX, wPx - boxWidth - 4 * crosshairOverlayDpr));
+      const radius = 5 * crosshairOverlayDpr;
+
+      const bg = isLightTheme ? 'rgba(232,236,240,1)' : 'rgba(40,44,52,1)';
+      const border = isLightTheme ? 'rgba(208,215,221,1)' : 'rgba(120,130,150,1)';
+      const textColor2 = isLightTheme ? '#5a6775' : '#cdd6e2';
+
+      ctx.beginPath();
+      ctx.moveTo(boxX + radius, yPx);
+      ctx.lineTo(boxX + boxWidth - radius, yPx);
+      ctx.quadraticCurveTo(boxX + boxWidth, yPx, boxX + boxWidth, yPx + radius);
+      ctx.lineTo(boxX + boxWidth, yPx + boxHeight - radius);
+      ctx.quadraticCurveTo(boxX + boxWidth, yPx + boxHeight, boxX + boxWidth - radius, yPx + boxHeight);
+      ctx.lineTo(boxX + radius, yPx + boxHeight);
+      ctx.quadraticCurveTo(boxX, yPx + boxHeight, boxX, yPx + boxHeight - radius);
+      ctx.lineTo(boxX, yPx + radius);
+      ctx.quadraticCurveTo(boxX, yPx, boxX + radius, yPx);
+      ctx.closePath();
+      ctx.fillStyle = bg;
+      ctx.fill();
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 1 * crosshairOverlayDpr;
+      ctx.stroke();
+
+      ctx.fillStyle = textColor2;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, boxX + boxWidth / 2, yPx + boxHeight / 2 + 0.5 * crosshairOverlayDpr);
+      ctx.restore();
+    }
+  }
+
+  function setCrosshairX(x, label, y){
+    if (x == null) {
+      crosshairOverlayX = null;
+      crosshairOverlayY = null;
+      crosshairOverlayLabel = '';
+      drawCrosshairOverlay();
+      return;
+    }
+    if (typeof x !== 'number' || !Number.isFinite(x)) return;
+    crosshairOverlayX = x;
+    if (typeof y === 'number' && Number.isFinite(y)) crosshairOverlayY = y;
+    crosshairOverlayLabel = label || '';
+    drawCrosshairOverlay();
+  }
+
+  // Expose for setupChartEvents and resize paths
+  window._setCrosshairX = setCrosshairX;
+  window._resizeCrosshairOverlay = resizeCrosshairOverlay;
+
+  chart=LightweightCharts.createChart(el,{
+    width:w,height:h,
+    layout:{background:{color:bgColor},textColor:textColor},
+    grid:{vertLines:{visible:false},horzLines:{visible:false}},
+    crosshair:{
+      mode:LightweightCharts.CrosshairMode.None,
+      vertLine:{visible:false,color:'rgba(0,0,0,0)',width:1,style:LightweightCharts.LineStyle.Solid},
+      horzLine:{visible:false,color:'rgba(0,0,0,0)',width:1,style:LightweightCharts.LineStyle.Dashed},
+    },
+    rightPriceScale:{borderColor:borderColor},
+    timeScale:{borderColor:borderColor,timeVisible:false,rightOffset:persistedRightOffset},
+    localization:{locale:'en-US'},
+  });
+  candleSeries=chart.addCandlestickSeries({
+    upColor:'#26a69a',downColor:'#ef5350',
+    borderUpColor:'#26a69a',borderDownColor:'#ef5350',
+    wickUpColor:'#26a69a',wickDownColor:'#ef5350',
+  });
+  ohlcSeries = chart.addBarSeries({
+    upColor: '#26a69a',
+    downColor: '#ef5350',
+    thinBars: false,
+    openVisible: true,
+  });
+  volSeries=chart.addHistogramSeries({
+    color:'#1f2833',priceFormat:{type:'volume'},
+    priceScaleId:'vol',scaleMargins:{top:0.85,bottom:0},
+  });
+
+  // ===== Background benchmark overlay: SPY (normalized to 100) =====
+  spyLineSeries = chart.addLineSeries({
+    color: 'rgba(136,153,170,0.22)',
+    lineWidth: 1,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    crosshairMarkerVisible: false,
+    priceScaleId: 'spy',
+  });
+  spyCandleSeries = chart.addCandlestickSeries({
+    upColor: 'rgba(38,166,154,0.12)',
+    downColor: 'rgba(239,83,80,0.12)',
+    borderUpColor: 'rgba(38,166,154,0.22)',
+    borderDownColor: 'rgba(239,83,80,0.22)',
+    wickUpColor: 'rgba(38,166,154,0.18)',
+    wickDownColor: 'rgba(239,83,80,0.18)',
+    priceLineVisible: false,
+    lastValueVisible: false,
+    priceScaleId: 'spy',
+  });
+  spyBarSeries = chart.addBarSeries({
+    upColor: 'rgba(38,166,154,0.22)',
+    downColor: 'rgba(239,83,80,0.22)',
+    thinBars: true,
+    openVisible: false,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    priceScaleId: 'spy',
+  });
+  try {
+    chart.priceScale('spy').applyOptions({
+      visible: false,
+      borderVisible: false,
+      scaleMargins: { top: 0.12, bottom: 0.12 },
+    });
+  } catch (e) {}
+
+  const volPaneEl = document.getElementById('vol-pane');
+  const volResizeHit = document.getElementById('vol-resize-hit');
+  const volPaneInfoEl = document.getElementById('vol-pane-info');
+  const volEl = document.getElementById('vol-chart');
+
+  function syncChartLayout(){
+    try{
+      chart?.resize(wrap.clientWidth||w, wrap.clientHeight||h);
+    }catch(e){}
+    try{
+      if (volChart && volPaneEl) {
+        volChart.resize(wrap.clientWidth||w, volPaneEl.clientHeight || volPaneHeight || 140);
+      }
+    }catch(e){}
+    try { resizeCanvas(); } catch(e) {}
+    try { resizeCrosshairOverlay(); } catch(e) {}
+  }
+
+  function ensureVolumePane(enabled, skipSave=false){
+    enabled = !!enabled;
+    volPaneEnabled = enabled;
+
+    if (volPaneEl) {
+      volPaneEl.classList.toggle('hidden', !enabled);
+      volPaneEl.setAttribute('aria-hidden', enabled ? 'false' : 'true');
+    }
+
+    // Move volume display into the pane (hide main info bar values).
+    try{
+      const infoVol = document.getElementById('info-vol');
+      const infoDVol = document.getElementById('info-dvol');
+      const infoVolItem = infoVol ? infoVol.closest('.info-item') : null;
+      const infoDVolItem = infoDVol ? infoDVol.closest('.info-item') : null;
+      if (enabled) {
+        if (infoVolItem) infoVolItem.style.display = 'none';
+        if (infoDVolItem) infoDVolItem.style.display = 'none';
+        if (volPaneInfoEl) volPaneInfoEl.setAttribute('aria-hidden','false');
+      } else {
+        if (infoVolItem) infoVolItem.style.display = '';
+        if (infoDVolItem) infoDVolItem.style.display = '';
+        if (volPaneInfoEl) volPaneInfoEl.setAttribute('aria-hidden','true');
+      }
+    }catch(e){}
+
+    const makeVolSeriesOptions = () => ({
+      color:'#1f2833',
+      priceFormat:{type:'volume'},
+      priceScaleId:'vol',
+      scaleMargins:{top:0.2,bottom:0},
+    });
+
+    if (enabled) {
+      // Hide the main chart time axis while volume pane is enabled.
+      // (Keep the only shared time axis on volChart.)
+      try {
+        chart?.timeScale()?.applyOptions({ visible: false, borderVisible: false, timeVisible: false });
+      } catch (e) {}
+
+      // Remove histogram series from main chart.
+      if (volSeries && chart) {
+        try { chart.removeSeries(volSeries); } catch(e) {}
+      }
+      volSeries = null;
+
+      if (volPaneEl) {
+        const hh = (typeof volPaneHeight === 'number' && Number.isFinite(volPaneHeight)) ? volPaneHeight : 140;
+        volPaneHeight = Math.max(80, Math.min(420, Math.round(hh)));
+        volPaneEl.style.height = `${volPaneHeight}px`;
+      }
+
+      if (!volChart && volEl) {
+        const vh = (volPaneEl && volPaneEl.clientHeight) ? volPaneEl.clientHeight : volPaneHeight;
+        volChart = LightweightCharts.createChart(volEl, {
+          width: w,
+          height: vh,
+          layout:{background:{color:bgColor},textColor:textColor},
+          grid:{vertLines:{visible:false},horzLines:{visible:false}},
+          crosshair:{
+            mode:LightweightCharts.CrosshairMode.None,
+            vertLine:{visible:false,color:'rgba(0,0,0,0)',width:1,style:LightweightCharts.LineStyle.Solid},
+            horzLine:{visible:false,color:'rgba(0,0,0,0)',width:1,style:LightweightCharts.LineStyle.Dashed},
+          },
+          rightPriceScale:{borderColor:borderColor, visible:true, borderVisible:true},
+          timeScale:{borderColor:borderColor,timeVisible:true,rightOffset:persistedRightOffset},
+          localization:{locale:'en-US'},
+          handleScroll:false,
+          handleScale:false,
+        });
+
+        // Update crosshair overlay while hovering the volume pane.
+        try{
+          const monthNames2 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          volChart.subscribeCrosshairMove(param=>{
+            if(!param || !param.point){
+              // window._setCrosshairX?.(null);
+              return;
+            }
+            try{
+              let label = '';
+              const t = param.time;
+              if(typeof t === 'string'){
+                const iso = t.length >= 10 ? t.slice(0,10) : t;
+                const yy = iso.slice(0,4);
+                const mm = iso.slice(5,7);
+                const dd = iso.slice(8,10) || '01';
+                const mi = Math.max(0, Math.min(11, parseInt(mm,10)-1));
+                const mon = monthNames2[mi] || 'Jan';
+                label = `${parseInt(dd,10)} ${mon} '${yy.slice(2)}`;
+              } else if(typeof t === 'number'){
+                const d = new Date(t*1000);
+                const day = d.getUTCDate();
+                const mon = monthNames2[d.getUTCMonth()] || 'Jan';
+                const yy2 = String(d.getUTCFullYear()).slice(2);
+                label = `${day} ${mon} '${yy2}`;
+              } else if(t && typeof t === 'object' && t.year){
+                const mi = Math.max(0, Math.min(11, parseInt(String(t.month),10)-1));
+                const mon = monthNames2[mi] || 'Jan';
+                const dd = t.day || 1;
+                const yy2 = String(t.year).slice(2);
+                label = `${dd} ${mon} '${yy2}`;
+              }
+              let xCoord = null;
+              try { xCoord = volChart.timeScale().timeToCoordinate(param.time); } catch(e) {}
+              const yOverlay = param.point.y + overlayVolOffsetY;
+              if (xCoord != null && Number.isFinite(xCoord)) window._setCrosshairX?.(xCoord, label, yOverlay);
+              else window._setCrosshairX?.(param.point.x, label, yOverlay);
+            }catch(e){}
+          });
+        }catch(e){}
+
+        // Sync visible range between main chart and volume pane chart.
+        try{
+          chart?.timeScale().subscribeVisibleLogicalRangeChange((range)=>{
+            if (!volChart || _syncingVolRange) return;
+            _syncingVolRange = true;
+            try { volChart.timeScale().setVisibleLogicalRange(range); } catch(e) {}
+            _syncingVolRange = false;
+          });
+          volChart.timeScale().subscribeVisibleLogicalRangeChange((range)=>{
+            if (!chart || _syncingVolRange) return;
+            _syncingVolRange = true;
+            try { chart.timeScale().setVisibleLogicalRange(range); } catch(e) {}
+            _syncingVolRange = false;
+          });
+        }catch(e){}
+      }
+
+      if (volChart) {
+        volSeries = volChart.addHistogramSeries(makeVolSeriesOptions());
+      }
+
+      syncChartLayout();
+    } else {
+      // Restore the main chart time axis when volume pane is disabled.
+      try {
+        chart?.timeScale()?.applyOptions({ visible: true, borderVisible: true, timeVisible: true });
+      } catch (e) {}
+
+      // Disable: destroy vol chart and recreate histogram series on main chart.
+      if (volChart) {
+        try { volChart.remove(); } catch(e) {}
+      }
+      volChart = null;
+      if (volEl) volEl.innerHTML = '';
+
+      volSeries = null;
+      if (chart) {
+        volSeries = chart.addHistogramSeries({
+          color:'#1f2833',
+          priceFormat:{type:'volume'},
+          priceScaleId:'vol',
+          scaleMargins:{top:0.85,bottom:0},
+        });
+      }
+
+      syncChartLayout();
+    }
+
+    // refresh volume data if bars already loaded
+    if (currentBars && currentBars.length) {
+      try { applyTimeframe(); } catch(e) {}
+    }
+
+    setupChartMenu();
+    if (!skipSave) saveSettings();
+  }
+  window._ensureVolumePane = ensureVolumePane;
+
+  // Volume pane height drag (invisible handle).
+  if (volResizeHit && volPaneEl) {
+    let dragging = false;
+    let startY = 0;
+    let startH = 0;
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const onMove = (e) => {
+      if (!dragging) return;
+      const dy = e.clientY - startY;
+      const next = clamp(startH - dy, 80, 420); // drag up = taller
+      volPaneHeight = next;
+      volPaneEl.style.height = `${Math.round(next)}px`;
+      syncChartLayout();
+    };
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      try { saveSettings(); } catch(e) {}
+    };
+    volResizeHit.addEventListener('mousedown', (e) => {
+      if (!volPaneEnabled) return;
+      e.preventDefault();
+      dragging = true;
+      startY = e.clientY;
+      startH = volPaneEl.clientHeight || volPaneHeight || 140;
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+  const saved=loadSettings();
+  if (saved?.priceColors?.up && saved?.priceColors?.down) {
+    priceColors = { up: saved.priceColors.up, down: saved.priceColors.down };
+  }
+  if (typeof saved?.spyOverlayEnabled === 'boolean') {
+    spyOverlayEnabled = saved.spyOverlayEnabled;
+  }
+  if (typeof saved?.spyOverlayMode === 'string' && saved.spyOverlayMode) {
+    const m = saved.spyOverlayMode.toString().toLowerCase();
+    spyOverlayMode = (m === 'line' || m === 'candle' || m === 'bar') ? m : 'line';
+  }
+  if (typeof saved?.volumePaneEnabled === 'boolean') {
+    volPaneEnabled = saved.volumePaneEnabled;
+  }
+  if (typeof saved?.volumePaneHeight === 'number' && Number.isFinite(saved.volumePaneHeight)) {
+    volPaneHeight = saved.volumePaneHeight;
+  }
+  if (typeof saved?.rightOffsetBars === 'number' && Number.isFinite(saved.rightOffsetBars)) {
+    persistedRightOffset = Math.max(0, Math.min(30, Math.round(saved.rightOffsetBars)));
+    try { chart.timeScale().applyOptions({ rightOffset: persistedRightOffset }); } catch(e) {}
+  }
+  // Persisted MA list: treat empty array as "user wants no MAs".
+  // Only fall back to defaults when there is no saved maList at all (first run).
+  if (saved && Array.isArray(saved.maList)) {
+    saved.maList.forEach(m => addMaRow(m, true));
+  } else {
+    MA_DEFAULTS.forEach(d => addMaRow(d, true));
+  }
+  setLog(saved?.isLogScale||false);
+  // Restore VS overlay settings (no auto-fetch: overlay updates only when currentBars exist).
+  setSpyOverlayEnabled(spyOverlayEnabled, true);
+  setSpyOverlayMode(spyOverlayMode, true);
+  chartType = (saved?.chartType === 'ohlc') ? 'ohlc' : 'candle';
+  priceSeries = chartType === 'ohlc' ? ohlcSeries : candleSeries;
+  candleSeries.setData([]);
+  ohlcSeries.setData([]);
+  applyPriceColors(true);
+  setupChartMenu();
+
+  // Apply volume pane after menu exists (and only after we read persisted settings).
+  ensureVolumePane(volPaneEnabled, true);
+
+  // Ensure overlay canvas size/offsets are correct after pane layout is applied.
+  requestAnimationFrame(() => { try { resizeCrosshairOverlay(); } catch (e) {} });
+
+  if(saved?.toolSettings){
+    Object.assign(toolSettings, saved.toolSettings);
+    ['hline','line','ray','seg','text','note'].forEach(t=>{
+      const s=toolSettings[t];
+      const popup=document.getElementById('popup-'+t);
+      if(!popup)return;
+      if(popup.querySelector('.cfg-color')) popup.querySelector('.cfg-color').value=s.color;
+      if(popup.querySelector('.cfg-width')) popup.querySelector('.cfg-width').value=s.width||2;
+      if(popup.querySelector('.cfg-style')) popup.querySelector('.cfg-style').value=s.style||'solid';
+      if(popup.querySelector('.cfg-fontsize')&&s.fontSize) popup.querySelector('.cfg-fontsize').value=s.fontSize;
+    });
+  }
+  syncDrawVars();
+  setupChartEvents();
+  resizeCanvas();
+  window.addEventListener('resize',()=>{
+    syncChartLayout();
+  });
+}
+
+function applyPriceColors(skipSave=false){
+  try{
+    candleSeries?.applyOptions({
+      upColor: priceColors.up,
+      downColor: priceColors.down,
+      borderUpColor: priceColors.up,
+      borderDownColor: priceColors.down,
+      wickUpColor: priceColors.up,
+      wickDownColor: priceColors.down,
+    });
+  }catch(e){}
+  try{
+    ohlcSeries?.applyOptions({
+      upColor: priceColors.up,
+      downColor: priceColors.down,
+    });
+  }catch(e){}
+  if (!skipSave) saveSettings();
+}
+
+function setChartType(nextType, skipSave=false){
+  chartType = (nextType === 'ohlc') ? 'ohlc' : 'candle';
+  priceSeries = chartType === 'ohlc' ? ohlcSeries : candleSeries;
+  setupChartMenu();
+  if (currentBars.length) applyTimeframe();
+  if (!skipSave) saveSettings();
+}
+
+function setupChartMenu(){
+  const btn = document.getElementById('ct-menu-btn');
+  const pop = document.getElementById('ct-pop');
+  const label = document.getElementById('ct-menu-label');
+  const optC = document.getElementById('ct-opt-candle');
+  const optO = document.getElementById('ct-opt-ohlc');
+  const up = document.getElementById('ct-up');
+  const down = document.getElementById('ct-down');
+  const volPaneCb = document.getElementById('ct-vol-pane');
+  const rightOffsetInput = document.getElementById('ct-right-offset');
+  if (!btn || !pop || !label || !optC || !optO || !up || !down || !volPaneCb || !rightOffsetInput) return;
+  if (btn.dataset.bound === '1') {
+    label.textContent = chartType === 'ohlc' ? 'OHLC Bars' : 'Candles';
+    btn.title = 'Chart settings';
+    btn.setAttribute('aria-label', `Chart settings (${label.textContent})`);
+    optC.classList.toggle('active', chartType === 'candle');
+    optO.classList.toggle('active', chartType === 'ohlc');
+    up.value = priceColors.up;
+    down.value = priceColors.down;
+    volPaneCb.checked = !!volPaneEnabled;
+    rightOffsetInput.value = String(persistedRightOffset);
+    return;
+  }
+  btn.dataset.bound = '1';
+
+  const close = () => { pop.classList.remove('open'); btn.setAttribute('aria-expanded','false'); };
+  const toggle = () => {
+    const open = !pop.classList.contains('open');
+    pop.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open ? 'true':'false');
+  };
+
+  // init UI
+  label.textContent = chartType === 'ohlc' ? 'OHLC Bars' : 'Candles';
+  btn.title = 'Chart settings';
+  btn.setAttribute('aria-label', `Chart settings (${label.textContent})`);
+  optC.classList.toggle('active', chartType === 'candle');
+  optO.classList.toggle('active', chartType === 'ohlc');
+  up.value = priceColors.up;
+  down.value = priceColors.down;
+
+  btn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); toggle(); });
+  document.addEventListener('pointerdown', (e)=>{
+    if(!pop.classList.contains('open')) return;
+    if(pop.contains(e.target) || btn.contains(e.target)) return;
+    close();
+  }, true);
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') close(); });
+
+  const pickType = (t) => {
+    setChartType(t);
+    label.textContent = chartType === 'ohlc' ? 'OHLC Bars' : 'Candles';
+    btn.setAttribute('aria-label', `Chart settings (${label.textContent})`);
+    optC.classList.toggle('active', chartType === 'candle');
+    optO.classList.toggle('active', chartType === 'ohlc');
+    close();
+  };
+  optC.addEventListener('click', ()=>pickType('candle'));
+  optO.addEventListener('click', ()=>pickType('ohlc'));
+  up.addEventListener('input', (e)=>{ priceColors.up = e.target.value; applyPriceColors(); });
+  down.addEventListener('input', (e)=>{ priceColors.down = e.target.value; applyPriceColors(); });
+
+  volPaneCb.checked = !!volPaneEnabled;
+  rightOffsetInput.value = String(persistedRightOffset);
+
+  volPaneCb.addEventListener('change', (e) => {
+    const on = !!e.target.checked;
+    if (typeof window._ensureVolumePane === 'function') {
+      window._ensureVolumePane(on);
+    } else {
+      volPaneEnabled = on;
+      saveSettings();
+    }
+  });
+
+  rightOffsetInput.addEventListener('input', (e) => {
+    const raw = Number(e.target.value);
+    if (!Number.isFinite(raw)) return;
+    const next = Math.max(0, Math.min(30, Math.round(raw)));
+    persistedRightOffset = next;
+    try { chart?.timeScale()?.applyOptions({ rightOffset: persistedRightOffset }); } catch(err) {}
+    try { volChart?.timeScale()?.applyOptions({ rightOffset: persistedRightOffset }); } catch(err) {}
+    saveSettings();
+  });
+}
+
+// ==============================================
+// DATA & FILTERS
+// ==============================================
+async function loadResults(){
+  try{allRows=await(await fetch('/api/results')).json();applyFilters();}
+  catch(e){document.getElementById('table-body').innerHTML=`<div style="padding:20px;color:#ef5350;font-family:var(--mono);font-size:12px;">Error: ${e.message}</div>`;}
+}
+function applyFilters(){
+  const mg=parseFloat(document.getElementById('f-gain').value)||0;
+  const sym=document.getElementById('f-sym').value.trim().toUpperCase();
+  const yr=document.getElementById('f-year').value.trim();
+  filtered=allRows.filter(r=>{
+    if(parseFloat(r.gain_pct)<mg)return false;
+    if(sym&&!r.symbol.includes(sym))return false;
+    if(yr&&String(r.year)!==yr)return false;
+    return true;
+  });
+  applySort();
+}
+function applySort(){
+  filtered.sort((a,b)=>{
+    let av=a[sortCol],bv=b[sortCol];
+    if(['gain_pct','avg_vol_b','year'].includes(sortCol)){av=parseFloat(av);bv=parseFloat(bv);}
+    return av<bv?-sortDir:av>bv?sortDir:0;
+  });
+  document.getElementById('count').textContent=filtered.length;
+  renderTable();
+}
+['f-gain','f-sym','f-year'].forEach(id=>document.getElementById(id).addEventListener('input',applyFilters));
+document.getElementById('table-header').addEventListener('click',e=>{
+  const sp=e.target.closest('span[data-col]');if(!sp)return;
+  const col=sp.dataset.col;
+  sortDir=sortCol===col?sortDir*-1:1;sortCol=col;
+  document.querySelectorAll('.table-header span').forEach(s=>s.classList.remove('sort-asc','sort-desc'));
+  sp.classList.add(sortDir===1?'sort-asc':'sort-desc');
+  applySort();
+});
+function renderTable(){
+  const body=document.getElementById('table-body');
+  if(!filtered.length){body.innerHTML='<div style="padding:20px;color:var(--muted);font-family:var(--mono);font-size:12px;">No results.</div>';return;}
+  body.innerHTML=filtered.map((r,i)=>`
+    <div class="row ${i===activeIdx?'active':''}" data-i="${i}">
+      <span class="sym">${r.symbol}</span>
+      <span class="date">${r.year}</span>
+      <span class="date">${r.low_date}</span>
+      <span class="date">${r.high_date}</span>
+      <span class="gain">+${parseFloat(r.gain_pct).toFixed(1)}%</span>
+      <span class="vol">${r.avg_vol_b}B</span>
+    </div>`).join('');
+  body.querySelectorAll('.row').forEach(el=>el.addEventListener('click',()=>selectRow(parseInt(el.dataset.i))));
+}
+
+// ==============================================
+// SELECT ROW
+// ==============================================
+async function selectRow(i){
+  activeIdx=i;renderTable();
+  document.querySelector('.row.active')?.scrollIntoView({block:'nearest'});
+  const r=filtered[i];
+  currentMoveRow = r;
+  currentSymbol=r.symbol;
+  document.getElementById('ct-sym').textContent=r.symbol;
+  document.getElementById('ct-cond').textContent=r.year;
+  document.getElementById('ct-gain').textContent=`+${parseFloat(r.gain_pct).toFixed(2)}%`;
+  document.getElementById('ct-range').textContent=`${r.low_date} → ${r.high_date}`;
+  document.getElementById('ct-vol').textContent=`$${r.avg_vol_b}B/mo`;
+  document.getElementById('placeholder').classList.add('hidden');
+  document.getElementById('loading').classList.remove('hidden');
+  try{
+    const bars=await(await fetch(`/api/ohlcv?symbol=${r.symbol}`)).json();
+    if(bars.error)throw new Error(bars.error);
+    currentBars=bars;
+    candleSeries.setData(bars.map(b=>({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close})));
+    volSeries.setData(bars.map(b => {
+      const volUp = isLightTheme ? '#d4efe6' : '#1a3a35';
+      const volDown = isLightTheme ? '#f5d4d4' : '#3a1a1a';
+      return { time: b.time, value: b.volume, color: b.close >= b.open ? volUp : volDown };
+    }));
+    applyTimeframe();
+    const tfBars=resampleBars(currentBars,currentTF);
+    const findBar=t=>tfBars.find(b=>b.time===t)||tfBars.reduce((best,b)=>b.time.localeCompare(t)<0?b:best,tfBars[0]);
+    const sb=findBar(r.low_date),eb=findBar(r.high_date);
+    (priceSeries || candleSeries).setMarkers([
+      {time:sb.time,position:'belowBar',color:'#00d4aa',shape:'arrowUp',  text:`▶ Low ${r.low_date} $${r.low_price}`},
+      {time:eb.time,position:'aboveBar',color:'#ff6b35',shape:'arrowDown',text:`◀ High ${r.high_date} +${parseFloat(r.gain_pct).toFixed(0)}%`},
+    ]);
+    const times=tfBars.map(b=>b.time),si=times.indexOf(sb.time),ei=times.indexOf(eb.time);
+    const pad=Math.max(5,Math.round((ei-si)*0.2));
+    chart.timeScale().setVisibleRange({from:tfBars[Math.max(0,si-pad)].time,to:tfBars[Math.min(tfBars.length-1,ei+pad)].time});
+    redrawAll();
+    
+    // Reset crosshair info
+    updateCrosshairInfo(null);
+  }catch(e){
+    console.error(e);document.getElementById('ct-gain').textContent=`Error: ${e.message}`;
+  }finally{document.getElementById('loading').classList.add('hidden');}
+}
+
+// ==============================================
+// BOOT
+// ==============================================
+window.addEventListener('load',async()=>{
+  // Load theme first so initChart uses correct colors
+  if (localStorage.getItem('bm_theme') === 'light') {
+    isLightTheme = true;
+    document.documentElement.setAttribute('data-theme', 'light');
+    themeToggle.textContent = '🌙 Dark';
+  }
+  initChart();
+  await loadDrawings();
+  loadResults();
+});
+
+// Ensure latest MA edits persist on refresh/close
+window.addEventListener('beforeunload', () => {
+  try { saveSettings(); } catch (e) {}
+});
+</script>
+</body>
+</html>
