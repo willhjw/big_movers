@@ -313,6 +313,28 @@
     opacity: 0.75;
     margin: 0 8px;
   }
+  /* Inline ADR period editor (lives inside the ADR label in the crosshair info bar) */
+  #info-adr-period{
+    width: 2.6em;
+    padding: 0 2px;
+    margin: 0 1px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--border);
+    color: var(--text);
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+  #info-adr-period::-webkit-outer-spin-button,
+  #info-adr-period::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+  #info-adr-period:hover{ border-bottom-color: var(--accent); }
+  #info-adr-period:focus{ border-bottom-color: var(--accent); color: var(--accent); }
+  #info-adr{
+    font-variant-numeric: tabular-nums;
+  }
   
   /* MA section with toggle */
   .ma-section {
@@ -979,6 +1001,17 @@
                   <input id="ct-right-offset" type="number" min="0" max="30" step="1" style="width:72px;">
                 </label>
               </div>
+              <div class="ct-section-title" style="margin-top:12px;">ADR</div>
+              <label class="ct-color" style="justify-content:flex-start;gap:8px;margin-top:6px;">
+                <input id="ct-adr-enabled" type="checkbox">
+                Enable
+              </label>
+              <div style="margin-top:6px;">
+                <label class="ct-color" style="justify-content:flex-start;gap:8px;">
+                  <span style="color:var(--muted);font-weight:700;">Period</span>
+                  <input id="ct-adr-period" type="number" min="1" max="999" step="1" style="width:72px;">
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -1035,6 +1068,10 @@
           <span class="info-value info-vol" id="info-dvol">—</span>
         </div>
         <div class="info-item"><span class="info-label">MA:</span><span class="info-value" id="info-ma">—</span></div>
+        <div class="info-item" id="info-adr-row">
+          <span class="info-label">ADR(<input type="number" id="info-adr-period" min="1" max="999" step="1" title="ADR lookback (bars)">):</span>
+          <span class="info-value" id="info-adr">—</span>
+        </div>
         <div class="info-spacer"></div>
         <div class="info-actions">
           <button class="tb-btn" id="log-toggle" title="Log / Linear scale">Log</button>
@@ -1259,6 +1296,8 @@ let isLogScale=false;
 let maList=[],maIdCounter=0;
 let drawTool='pan';
 let currentTF='D'; // D | W | M
+let adrEnabled=true; // ADR(x) indicator on/off
+let adrPeriod=20;    // ADR(x) lookback period
 // ===== VS (SPY benchmark overlay) state =====
 let spyLineSeries=null, spyCandleSeries=null, spyBarSeries=null;
 let spyOverlayEnabled=false;
@@ -1409,6 +1448,8 @@ function saveSettings(){
     volumePaneEnabled: !!volPaneEnabled,
     volumePaneHeight: (typeof volPaneHeight === 'number' && Number.isFinite(volPaneHeight)) ? volPaneHeight : 140,
     rightOffsetBars: persistedRightOffset,
+    adrEnabled: adrEnabled,
+    adrPeriod: adrPeriod,
     maList:maList.map(m=>({type:m.type,period:m.period,color:m.color,enabled:m.enabled}))
   }));
   flash('Settings saved');
@@ -1445,6 +1486,55 @@ function calcEMA(bars,p){
   return out;
 }
 function getMaData(bars,type,p){return type==='EMA'?calcEMA(bars,p):calcMA(bars,p);}
+
+// ==============================================
+// ADR(x) — Average Daily Range (percent) over last x bars
+// For each of the last x bars, compute (high/low - 1) * 100, then average.
+// ==============================================
+function calcADR(bars,p,endIdx){
+  if(!Array.isArray(bars)||p<1)return null;
+  const end=(typeof endIdx==='number' && endIdx>=0 && endIdx<bars.length) ? endIdx : bars.length-1;
+  const start=end-p+1;
+  if(start<0)return null;
+  let sum=0,n=0;
+  for(let i=start;i<=end;i++){
+    const b=bars[i];
+    if(!b||!(b.low>0)||!(b.high>0))continue;
+    sum+=(b.high/b.low - 1)*100;
+    n++;
+  }
+  if(!n)return null;
+  return sum/n;
+}
+function syncAdrRowVisibility(){
+  const row=document.getElementById('info-adr-row');
+  if(row)row.style.display=adrEnabled?'':'none';
+}
+function syncAdrPeriodInputs(){
+  const a=document.getElementById('info-adr-period');
+  const b=document.getElementById('ct-adr-period');
+  if(a && document.activeElement!==a) a.value=String(adrPeriod);
+  if(b && document.activeElement!==b) b.value=String(adrPeriod);
+}
+function setAdrPeriod(raw){
+  const n=Number(raw);
+  if(!Number.isFinite(n))return;
+  adrPeriod=Math.max(1,Math.min(999,Math.round(n)));
+  syncAdrPeriodInputs();
+  updateCrosshairInfo(null);
+  saveSettings();
+}
+// Attach inline input listener on DOM ready (input lives in crosshair info bar)
+document.addEventListener('DOMContentLoaded',()=>{
+  const el=document.getElementById('info-adr-period');
+  if(!el)return;
+  el.value=String(adrPeriod);
+  el.addEventListener('input',e=>setAdrPeriod(e.target.value));
+  el.addEventListener('change',e=>setAdrPeriod(e.target.value));
+  el.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();setAdrPeriod(e.target.value);el.blur();}
+  });
+});
 function addMaRow(cfg={},skipSave=false){
   const id=++maIdCounter,type=cfg.type||'EMA',period=cfg.period||20,color=cfg.color||'#fff',enabled=cfg.enabled!==false;
   const series=chart?chart.addLineSeries({color,lineWidth:2,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false}):null;
@@ -1594,6 +1684,18 @@ function updateCrosshairInfo(param) {
   const volPaneVol = document.getElementById('vol-pane-vol');
   const volPaneDVol = document.getElementById('vol-pane-dvol');
   const infoMA = document.getElementById('info-ma');
+  const infoADR = document.getElementById('info-adr');
+
+  const renderADR = (endIdx) => {
+    if (!infoADR) return;
+    if (!adrEnabled) return;
+    if (!currentBars || !currentBars.length) { infoADR.textContent = '—'; return; }
+    const tfBars = resampleBars(currentBars, currentTF);
+    const v = calcADR(tfBars, adrPeriod, endIdx);
+    infoADR.innerHTML = (v == null)
+      ? '—'
+      : `<span style="color:var(--yellow);font-weight:600">${v.toFixed(2)}%</span>`;
+  };
 
   const clear = () => {
     infoDate.textContent = '—';
@@ -1608,6 +1710,7 @@ function updateCrosshairInfo(param) {
     if (volPaneVol) volPaneVol.textContent = '—';
     if (volPaneDVol) volPaneDVol.textContent = '—';
     if (infoMA) infoMA.textContent = '—';
+    renderADR(undefined); // fall back to most recent bar
   };
 
   if (!param || !param.point || !currentBars || !currentBars.length) { clear(); return; }
@@ -1730,6 +1833,9 @@ function updateCrosshairInfo(param) {
     }
     infoMA.innerHTML = parts.length ? parts.join('<span class="ma-sep">|</span>') : '—';
   }
+
+  // ADR(x) readout for the hovered bar
+  renderADR(barIdx >= 0 ? barIdx : undefined);
 }
 
 // ==============================================
@@ -1987,6 +2093,7 @@ function applyTimeframe(){
   });
   applyMoveMarkers();
   try { updateSpyOverlay(); } catch (e) {}
+  try { updateCrosshairInfo(null); } catch (e) {}
   redrawAll();
 }
 
@@ -3229,6 +3336,14 @@ function initChart(){
     persistedRightOffset = Math.max(0, Math.min(30, Math.round(saved.rightOffsetBars)));
     try { chart.timeScale().applyOptions({ rightOffset: persistedRightOffset }); } catch(e) {}
   }
+  if (typeof saved?.adrPeriod === 'number' && Number.isFinite(saved.adrPeriod)) {
+    adrPeriod = Math.max(1, Math.min(999, Math.round(saved.adrPeriod)));
+  }
+  if (typeof saved?.adrEnabled === 'boolean') {
+    adrEnabled = saved.adrEnabled;
+  }
+  syncAdrRowVisibility();
+  syncAdrPeriodInputs();
   // Persisted MA list: treat empty array as "user wants no MAs".
   // Only fall back to defaults when there is no saved maList at all (first run).
   if (saved && Array.isArray(saved.maList)) {
@@ -3311,7 +3426,9 @@ function setupChartMenu(){
   const down = document.getElementById('ct-down');
   const volPaneCb = document.getElementById('ct-vol-pane');
   const rightOffsetInput = document.getElementById('ct-right-offset');
-  if (!btn || !pop || !label || !optC || !optO || !up || !down || !volPaneCb || !rightOffsetInput) return;
+  const adrPeriodInput = document.getElementById('ct-adr-period');
+  const adrEnabledCb = document.getElementById('ct-adr-enabled');
+  if (!btn || !pop || !label || !optC || !optO || !up || !down || !volPaneCb || !rightOffsetInput || !adrPeriodInput || !adrEnabledCb) return;
   if (btn.dataset.bound === '1') {
     label.textContent = chartType === 'ohlc' ? 'OHLC Bars' : 'Candles';
     btn.title = 'Chart settings';
@@ -3322,6 +3439,8 @@ function setupChartMenu(){
     down.value = priceColors.down;
     volPaneCb.checked = !!volPaneEnabled;
     rightOffsetInput.value = String(persistedRightOffset);
+    adrPeriodInput.value = String(adrPeriod);
+    adrEnabledCb.checked = !!adrEnabled;
     return;
   }
   btn.dataset.bound = '1';
@@ -3383,6 +3502,18 @@ function setupChartMenu(){
     persistedRightOffset = next;
     try { chart?.timeScale()?.applyOptions({ rightOffset: persistedRightOffset }); } catch(err) {}
     try { volChart?.timeScale()?.applyOptions({ rightOffset: persistedRightOffset }); } catch(err) {}
+    saveSettings();
+  });
+
+  adrPeriodInput.value = String(adrPeriod);
+  adrPeriodInput.addEventListener('input', (e) => setAdrPeriod(e.target.value));
+
+  adrEnabledCb.checked = !!adrEnabled;
+  adrEnabledCb.addEventListener('change', (e) => {
+    adrEnabled = !!e.target.checked;
+    const row = document.getElementById('info-adr-row');
+    if (row) row.style.display = adrEnabled ? '' : 'none';
+    updateCrosshairInfo(null);
     saveSettings();
   });
 }
