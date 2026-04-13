@@ -229,21 +229,23 @@
   /* Crosshair info bar */
   .crosshair-info {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 16px;
-    padding: 4px 12px;
+    gap: 4px 10px;
+    padding: 3px 10px;
     background: var(--bg3);
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
     font-family: var(--mono);
     font-size: 11px;
-    min-height: 28px;
+    min-height: 26px;
     color: var(--muted);
   }
   .info-item {
     display: flex;
     align-items: center;
     gap: 2px;
+    white-space: nowrap;
   }
   .info-label {
     color: var(--muted);
@@ -253,11 +255,9 @@
   .info-value {
     color: var(--text);
     font-weight: 500;
-    min-width: 45px;
   }
   #info-change {
     display: inline-block;
-    width: 130px;
     min-width: unset;
   }
   .info-value.up {
@@ -269,21 +269,9 @@
   .info-date {
     color: var(--accent);
     font-weight: 600;
-    min-width: 90px;
   }
   .info-vol {
     color: var(--yellow);
-  }
-  /* keep spacing compact while still stable */
-  #info-open, #info-high, #info-low, #info-close {
-    width: 41px;
-    min-width: 41px;
-    text-align: left;
-  }
-  #info-vol, #info-dvol {
-    width: 45px;
-    min-width: 45px;
-    text-align: left;
   }
 
   /* Stable MA numbers (no jitter, compact) */
@@ -305,19 +293,18 @@
   }
   #info-ma .ma-val{
     display: inline-block;
-    width: 62px; /* fixed width prevents jitter */
     text-align: left;
   }
   #info-ma .ma-sep{
     color: var(--muted);
     opacity: 0.75;
-    margin: 0 8px;
+    margin: 0 4px;
   }
   /* Inline ADR period editor (lives inside the ADR label in the crosshair info bar) */
   #info-adr-period{
-    width: 2.6em;
-    padding: 0 2px;
-    margin: 0 1px;
+    width: 2.2em;
+    padding: 0 1px;
+    margin: 0;
     background: transparent;
     border: none;
     border-bottom: 1px dashed var(--border);
@@ -334,6 +321,10 @@
   #info-adr-period:focus{ border-bottom-color: var(--accent); color: var(--accent); }
   #info-adr{
     font-variant-numeric: tabular-nums;
+    min-width: unset;
+  }
+  #info-adr-row{
+    white-space: nowrap;
   }
   
   /* MA section with toggle */
